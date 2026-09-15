@@ -14,7 +14,7 @@ Digunakan untuk mendapatkan data geografis/lokasi yang relevan bagi fitur pencar
 
 - **Modul (A) = Autentikasi & Profil Pengguna** : Register/login untuk Customer dan Mitra, kelola data profil, role-based access. — [Hisyam]
 - **Modul (B) = Repair Request & Tracking** : Customer membuat, melihat, mengubah, dan menghapus Repair Request; status reparasi diperbarui mitra (Pending → Accepted → In Repair → Completed). — [Akmal]
-- **Modul (C) = Mitra Repairer** : CRUD profil mitra reparasi (nama, layanan, lokasi, kontak). — [Hafidz]
+- **Modul (C) = Mitra Repairer** : CRUD profil mitra reparasi (nama, layanan, lokasi, kontak). — [Hafizh]
 - **Modul (D) = Repair Location & Discovery** : Pencarian dan penyimpanan mitra berdasarkan lokasi, terintegrasi dengan OpenStreetMap/Overpass API. — [Dave]
 - **Modul (E) = Repair Review & Impact Tracker** : Customer memberi dan mengelola review/rating terhadap mitra setelah repair selesai, serta melihat dashboard "Impact Tracker" berupa progress bar/badge yang bertambah setiap kali sebuah repair berhasil diselesaikan, merepresentasikan jumlah barang yang "diselamatkan" dari sampah. — [Aufa]
 
