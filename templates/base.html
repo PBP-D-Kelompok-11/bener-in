@@ -1,12 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-</html>
-
+<html lang="id">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,24 +13,32 @@
     {% endblock css %}
 
     {% block meta %}
-    
+    <title>bener.in</title>
     {% endblock meta %}
 </head>
 
 <body>
   <header class="site-header">
     <div class="container">
-        <a href="{% url 'main:show_main' %}" class="brand">{{ name }}</a>
         <nav>
-            <a> </a>
+            <a href="/" class="btn btn-home">♻️ bener.in</a>
+            <div class="nav-right">
+                <a href="/repair/" class="btn btn-ghost">Repair</a>
+                <a href="/history/" class="btn btn-ghost">History</a>
+                <a href="/login/" class="btn btn-outline">Login</a>
+                <a href="/register/" class="btn btn-solid">Register</a>
+            </div>
         </nav>
     </div>
   </header>
+
   {% block content %} {% endblock content %}
 
   <footer class="site-footer">
       <div class="container">
-          <p> </p>
+          <p><strong>bener.in</strong> — Karya Kelompok 11 PBP-D</p>
+          <p>Data lokasi dari &copy; kontributor <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></p>
       </div>
   </footer>
 </body>
+</html>

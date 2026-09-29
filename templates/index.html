@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>bener.in — Repair before replace</title>
+{% endblock meta %}
+
+{% block content %}
+<main>
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Masih bisa dibenerin, kok.</h1>
+      <p>Temukan mitra reparasi terdekat, ajukan perbaikan, dan pantau prosesnya sampai barangmu berfungsi lagi. Perbaiki dulu, baru pikir ganti.</p>
+      <div class="hero-cta">
+        <a href="/repair/" class="btn btn-solid btn-lg">Ajukan repair</a>
+        <a href="#cara-kerja" class="btn btn-outline btn-lg">Lihat cara kerja</a>
+      </div>
+    </div>
+
+    <aside class="ticket" aria-label="Contoh status repair">
+      <p class="ticket-item">Setrika rusak, tidak panas</p>
+      <ol class="track">
+        <li class="done">Pending</li>
+        <li class="done">Accepted</li>
+        <li class="now">In Repair</li>
+        <li>Completed</li>
+      </ol>
+      <p class="ticket-note">Diperbarui mitra secara langsung</p>
+    </aside>
+  </section>
+
+  <section class="section" id="cari-mitra">
+    <h2>Cari tempat reparasi di sekitarmu</h2>
+    <div id="map" role="application" aria-label="Peta OpenStreetMap"></div>
+
+    <form id="search-form" class="search" role="search">
+      <label for="search-input" class="sr-only">Cari lokasi</label>
+      <input id="search-input" type="search" placeholder="Ketik kota atau daerah, mis. Depok, Bandung, Surabaya" required>
+      <button type="submit" class="btn btn-solid">Cari</button>
+    </form>
+    <p id="search-status" class="search-status" aria-live="polite">Cari sebuah lokasi untuk menampilkan tempat reparasi di sekitarnya.</p>
+  </section>
+
+  <section class="section" id="cara-kerja">
+    <h2>Dari rusak sampai jalan lagi</h2>
+    <ol class="steps">
+      <li><h3>Cari mitra</h3><p>Lihat profil, layanan, dan lokasi mitra reparasi di peta.</p></li>
+      <li><h3>Ajukan repair</h3><p>Ceritakan kerusakan barangmu dan kirim permintaan.</p></li>
+      <li><h3>Pantau status</h3><p>Ikuti perkembangan dari Pending sampai Completed.</p></li>
+      <li><h3>Beri review</h3><p>Nilai mitra setelah barangmu selesai diperbaiki.</p></li>
+    </ol>
+  </section>
+
+  <section class="section roles">
+    <h2>Untuk siapa bener.in?</h2>
+    <div class="role-grid">
+      <article class="role role-main">
+        <h3>Customer</h3>
+        <p>Cari mitra, ajukan repair, pantau status, dan beri review setelah selesai.</p>
+        <a href="/register/" class="btn btn-solid">Daftar sebagai customer</a>
+      </article>
+      <article class="role">
+        <h3>Mitra reparasi</h3>
+        <p>Buat profil layanan dan lokasi, terima permintaan, lalu perbarui status pengerjaan.</p>
+        <a href="/register/" class="btn btn-outline">Gabung jadi mitra</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="section faq" id="faq">
+    <h2>Pertanyaan yang sering diajukan</h2>
+    <div class="faq-list">
+      <details>
+        <summary>Apa itu bener.in?</summary>
+        <p>bener.in adalah platform yang mempertemukan pemilik barang rusak dengan mitra reparasi. Kamu bisa mencari mitra, mengajukan permintaan perbaikan, dan memantau prosesnya sampai barang selesai diperbaiki.</p>
+      </details>
+      <details>
+        <summary>Bagaimana cara mengajukan repair?</summary>
+        <p>Daftar atau login sebagai customer, buka halaman Repair, lalu isi permintaan berisi barang dan kerusakannya. Kamu bisa mengubah atau menghapus permintaan itu selama masih diperlukan.</p>
+      </details>
+      <details>
+        <summary>Apa arti status repair?</summary>
+        <p>Pending berarti permintaanmu menunggu mitra. Accepted berarti mitra menerimanya, In Repair berarti barang sedang dikerjakan, dan Completed berarti perbaikan selesai. Mitra yang memperbarui statusnya.</p>
+      </details>
+      <details>
+        <summary>Bagaimana cara menjadi mitra reparasi?</summary>
+        <p>Daftar sebagai mitra, lalu lengkapi profilmu dengan nama, layanan, lokasi, dan kontak. Setelah itu kamu bisa menerima permintaan repair dan memperbarui statusnya.</p>
+      </details>
+      <details>
+        <summary>Kapan aku bisa memberi review?</summary>
+        <p>Setelah repair berstatus Completed, kamu bisa memberi rating dan review untuk mitra tersebut.</p>
+      </details>
+      <details>
+        <summary>Apa itu Impact Tracker?</summary>
+        <p>Impact Tracker adalah dashboard berupa progress bar dan badge yang bertambah setiap kali repairmu selesai. Angkanya menunjukkan berapa banyak barang yang kamu selamatkan dari tempat sampah.</p>
+      </details>
+      <details>
+        <summary>Dari mana data lokasi di peta?</summary>
+        <p>Peta dan pencarian lokasi memakai data OpenStreetMap. Profil mitra bener.in sendiri tersimpan di database kami.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="impact">
+    <div class="impact-inner">
+      <h2>Setiap repair mengurangi sampah.</h2>
+      <p>Impact Tracker mencatat berapa banyak barang yang kamu selamatkan dari tempat sampah.</p>
+      <div class="meter" role="img" aria-label="Contoh progres: 3 dari 5 barang diselamatkan">
+        <span style="width:60%"></span>
+      </div>
+      <p class="meter-label">3 dari 5 barang diselamatkan</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+  // Peta OpenStreetMap (Leaflet), pusat awal di Jakarta
+  var map = L.map('map').setView([-6.2088, 106.8456], 11);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  var markers = L.layerGroup().addTo(map);
+  var form = document.getElementById('search-form');
+  var input = document.getElementById('search-input');
+  var statusEl = document.getElementById('search-status');
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Overpass: cari tempat reparasi dalam radius 3 km dari titik pencarian
+  function buildQuery(lat, lon) {
+    var around = '(around:3000,' + lat + ',' + lon + ')';
+    return '[out:json][timeout:25];(' +
+      'nwr' + around + '["craft"~"^(electronics_repair|shoemaker|tailor|watchmaker)$"];' +
+      'nwr' + around + '["shop"~"^(electronics_repair|mobile_phone|computer|repair|tailor|shoe_repair)$"];' +
+      ');out center 60;';
+  }
+
+  async function findRepairPlaces(lat, lon) {
+    var res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(buildQuery(lat, lon))
+    });
+    if (!res.ok) throw new Error('Overpass error ' + res.status);
+    var data = await res.json();
+    return data.elements;
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var query = input.value.trim();
+    if (!query) return;
+
+    markers.clearLayers();
+    statusEl.textContent = 'Mencari lokasi...';
+
+    try {
+      // Nominatim: ubah nama tempat jadi koordinat
+      var geoRes = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query));
+      var places = await geoRes.json();
+      if (!places.length) {
+        statusEl.textContent = 'Lokasi "' + query + '" tidak ditemukan. Coba nama yang lebih umum.';
+        return;
+      }
+
+      var lat = parseFloat(places[0].lat);
+      var lon = parseFloat(places[0].lon);
+      map.setView([lat, lon], 14);
+      statusEl.textContent = 'Mencari tempat reparasi di sekitar ' + places[0].display_name.split(',')[0] + '...';
+
+      var results = await findRepairPlaces(lat, lon);
+      var bounds = [];
+
+      results.forEach(function (el) {
+        var pLat = el.lat || (el.center && el.center.lat);
+        var pLon = el.lon || (el.center && el.center.lon);
+        if (!pLat || !pLon) return;
+
+        var tags = el.tags || {};
+        var name = tags.name || 'Tanpa nama';
+        var kind = tags.craft || tags.shop || '';
+        var html = '<strong>' + escapeHtml(name) + '</strong><br>' + escapeHtml(kind.replace(/_/g, ' '));
+        if (tags['addr:street']) html += '<br>' + escapeHtml(tags['addr:street']);
+        if (tags.phone) html += '<br>' + escapeHtml(tags.phone);
+
+        L.marker([pLat, pLon]).bindPopup(html).addTo(markers);
+        bounds.push([pLat, pLon]);
+      });
+
+      if (bounds.length) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+        statusEl.textContent = 'Ditemukan ' + bounds.length + ' tempat reparasi di sekitar lokasi ini.';
+      } else {
+        statusEl.textContent = 'Belum ada data tempat reparasi di OpenStreetMap untuk area ini.';
+      }
+    } catch (err) {
+      statusEl.textContent = 'Gagal memuat data peta. Periksa koneksi lalu coba lagi.';
+    }
+  });
+</script>
+{% endblock content %}
