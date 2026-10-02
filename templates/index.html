@@ -3,7 +3,6 @@
 
 {% block css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
 {% endblock css %}
 
 {% block meta %}
@@ -36,14 +35,35 @@
 
   <section class="section" id="cari-mitra">
     <h2>Cari tempat reparasi di sekitarmu</h2>
-    <div id="map" role="application" aria-label="Peta OpenStreetMap"></div>
+    <div class="map-wrap">
+      <div id="map" role="application" aria-label="Peta OpenStreetMap"></div>
 
-    <form id="search-form" class="search" role="search">
-      <label for="search-input" class="sr-only">Cari lokasi</label>
-      <input id="search-input" type="search" placeholder="Ketik kota atau daerah, mis. Depok, Bandung, Surabaya" required>
-      <button type="submit" class="btn btn-solid">Cari</button>
-    </form>
-    <p id="search-status" class="search-status" aria-live="polite">Cari sebuah lokasi untuk menampilkan tempat reparasi di sekitarnya.</p>
+      <div class="map-filter" id="map-filter">
+        <label for="category-select">Barang yang ingin diperbaiki</label>
+        <select id="category-select">
+          <option value="">Pilih kategori...</option>
+          <optgroup label="Elektronik">
+            <option value="gadget">Gadget (HP, laptop, tablet)</option>
+            <option value="elektronik">Perabot elektronik (TV, kulkas, AC)</option>
+          </optgroup>
+          <optgroup label="Kendaraan">
+            <option value="mobil">Mobil</option>
+            <option value="motor">Motor</option>
+            <option value="sepeda">Sepeda</option>
+          </optgroup>
+          <optgroup label="Rumah tangga &amp; fashion">
+            <option value="furnitur">Furnitur &amp; perabot kayu</option>
+            <option value="sepatu">Sepatu &amp; tas</option>
+            <option value="pakaian">Pakaian &amp; jahitan</option>
+            <option value="jam">Jam tangan &amp; jam dinding</option>
+            <option value="perhiasan">Perhiasan</option>
+          </optgroup>
+          <option value="lainnya">Lainnya (reparasi umum)</option>
+        </select>
+        <button type="button" id="area-btn" class="btn btn-outline" disabled>Cari di area ini</button>
+      </div>
+    </div>
+    <p id="search-status" class="search-status" aria-live="polite">Pilih kategori barang untuk menampilkan tempat reparasi di area peta ini. Geser atau zoom peta untuk pindah area.</p>
   </section>
 
   <section class="section" id="cara-kerja">
@@ -101,7 +121,7 @@
       </details>
       <details>
         <summary>Dari mana data lokasi di peta?</summary>
-        <p>Peta dan pencarian lokasi memakai data OpenStreetMap. Profil mitra bener.in sendiri tersimpan di database kami.</p>
+        <p>Peta dan tempat reparasi yang muncul di peta memakai data OpenStreetMap. Profil mitra bener.in sendiri tersimpan di database kami.</p>
       </details>
     </div>
   </section>
@@ -128,9 +148,30 @@
   }).addTo(map);
 
   var markers = L.layerGroup().addTo(map);
-  var form = document.getElementById('search-form');
-  var input = document.getElementById('search-input');
+  var select = document.getElementById('category-select');
+  var areaBtn = document.getElementById('area-btn');
   var statusEl = document.getElementById('search-status');
+  var filterBox = document.getElementById('map-filter');
+  var idleText = 'Pilih kategori barang untuk menampilkan tempat reparasi di area peta ini. Geser atau zoom peta untuk pindah area.';
+
+  // Supaya klik/scroll di kotak filter tidak ikut menggeser peta
+  L.DomEvent.disableClickPropagation(filterBox);
+  L.DomEvent.disableScrollPropagation(filterBox);
+
+  // Kategori barang -> tag OpenStreetMap ([key, value])
+  var CATEGORIES = {
+    gadget:     [['shop', 'mobile_phone'], ['shop', 'computer'], ['craft', 'electronics_repair'], ['shop', 'electronics_repair']],
+    elektronik: [['craft', 'electronics_repair'], ['shop', 'electronics_repair'], ['shop', 'appliance'], ['craft', 'electrician']],
+    mobil:      [['shop', 'car_repair']],
+    motor:      [['shop', 'motorcycle_repair'], ['shop', 'motorcycle']],
+    sepeda:     [['shop', 'bicycle']],
+    furnitur:   [['craft', 'carpenter'], ['craft', 'upholsterer'], ['shop', 'furniture']],
+    sepatu:     [['craft', 'shoemaker'], ['shop', 'shoe_repair']],
+    pakaian:    [['craft', 'tailor'], ['shop', 'tailor']],
+    jam:        [['craft', 'watchmaker']],
+    perhiasan:  [['craft', 'jeweller']],
+    lainnya:    [['shop', 'repair']]
+  };
 
   function escapeHtml(text) {
     var div = document.createElement('div');
@@ -138,75 +179,70 @@
     return div.innerHTML;
   }
 
-  // Overpass: cari tempat reparasi dalam radius 3 km dari titik pencarian
-  function buildQuery(lat, lon) {
-    var around = '(around:3000,' + lat + ',' + lon + ')';
-    return '[out:json][timeout:25];(' +
-      'nwr' + around + '["craft"~"^(electronics_repair|shoemaker|tailor|watchmaker)$"];' +
-      'nwr' + around + '["shop"~"^(electronics_repair|mobile_phone|computer|repair|tailor|shoe_repair)$"];' +
-      ');out center 60;';
-  }
-
-  async function findRepairPlaces(lat, lon) {
-    var res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: 'data=' + encodeURIComponent(buildQuery(lat, lon))
+  // Overpass: cari semua tag kategori di dalam area peta yang sedang terlihat
+  function buildQuery(filters, b) {
+    var box = '(' + b.getSouth() + ',' + b.getWest() + ',' + b.getNorth() + ',' + b.getEast() + ')';
+    var parts = filters.map(function (f) {
+      return 'nwr["' + f[0] + '"="' + f[1] + '"]' + box + ';';
     });
-    if (!res.ok) throw new Error('Overpass error ' + res.status);
-    var data = await res.json();
-    return data.elements;
+    return '[out:json][timeout:25];(' + parts.join('') + ');out center 100;';
   }
 
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    var query = input.value.trim();
-    if (!query) return;
+  var controller = null;
 
+  async function loadPlaces() {
+    var key = select.value;
     markers.clearLayers();
-    statusEl.textContent = 'Mencari lokasi...';
+    areaBtn.disabled = !key;
+
+    if (!key) {
+      statusEl.textContent = idleText;
+      return;
+    }
+    if (map.getZoom() < 12) {
+      statusEl.textContent = 'Zoom peta lebih dekat dulu, lalu klik "Cari di area ini".';
+      return;
+    }
+
+    if (controller) controller.abort();
+    controller = new AbortController();
+    statusEl.textContent = 'Mencari tempat reparasi...';
 
     try {
-      // Nominatim: ubah nama tempat jadi koordinat
-      var geoRes = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query));
-      var places = await geoRes.json();
-      if (!places.length) {
-        statusEl.textContent = 'Lokasi "' + query + '" tidak ditemukan. Coba nama yang lebih umum.';
-        return;
-      }
+      var res = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(buildQuery(CATEGORIES[key], map.getBounds())),
+        signal: controller.signal
+      });
+      if (!res.ok) throw new Error('Overpass error ' + res.status);
+      var data = await res.json();
+      var label = select.options[select.selectedIndex].text;
+      var count = 0;
 
-      var lat = parseFloat(places[0].lat);
-      var lon = parseFloat(places[0].lon);
-      map.setView([lat, lon], 14);
-      statusEl.textContent = 'Mencari tempat reparasi di sekitar ' + places[0].display_name.split(',')[0] + '...';
-
-      var results = await findRepairPlaces(lat, lon);
-      var bounds = [];
-
-      results.forEach(function (el) {
-        var pLat = el.lat || (el.center && el.center.lat);
-        var pLon = el.lon || (el.center && el.center.lon);
-        if (!pLat || !pLon) return;
+      data.elements.forEach(function (el) {
+        var lat = el.lat || (el.center && el.center.lat);
+        var lon = el.lon || (el.center && el.center.lon);
+        if (!lat || !lon) return;
 
         var tags = el.tags || {};
-        var name = tags.name || 'Tanpa nama';
-        var kind = tags.craft || tags.shop || '';
-        var html = '<strong>' + escapeHtml(name) + '</strong><br>' + escapeHtml(kind.replace(/_/g, ' '));
+        var html = '<strong>' + escapeHtml(tags.name || 'Tanpa nama') + '</strong><br>' + escapeHtml(label);
         if (tags['addr:street']) html += '<br>' + escapeHtml(tags['addr:street']);
         if (tags.phone) html += '<br>' + escapeHtml(tags.phone);
 
-        L.marker([pLat, pLon]).bindPopup(html).addTo(markers);
-        bounds.push([pLat, pLon]);
+        L.marker([lat, lon]).bindPopup(html).addTo(markers);
+        count++;
       });
 
-      if (bounds.length) {
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
-        statusEl.textContent = 'Ditemukan ' + bounds.length + ' tempat reparasi di sekitar lokasi ini.';
-      } else {
-        statusEl.textContent = 'Belum ada data tempat reparasi di OpenStreetMap untuk area ini.';
-      }
+      statusEl.textContent = count
+        ? 'Ditemukan ' + count + ' tempat untuk kategori ini di area peta.'
+        : 'Belum ada data untuk kategori ini di OpenStreetMap. Coba geser atau perbesar area peta.';
     } catch (err) {
+      if (err.name === 'AbortError') return;
       statusEl.textContent = 'Gagal memuat data peta. Periksa koneksi lalu coba lagi.';
     }
-  });
+  }
+
+  select.addEventListener('change', loadPlaces);
+  areaBtn.addEventListener('click', loadPlaces);
 </script>
 {% endblock content %}

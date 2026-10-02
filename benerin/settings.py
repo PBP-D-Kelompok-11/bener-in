@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'main'
+    'main',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -102,6 +103,14 @@ else:
         }
     }
 
+AUTH_USER_MODEL = 'authentication.Customer'
+AUTHENTICATION_BACKENDS = [
+    'authentication.backends.CustomerBackend',
+    'authentication.backends.MitraBackend',
+]
+LOGIN_URL = 'authentication:login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
