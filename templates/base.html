@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
     {% block css %}
 
@@ -23,10 +24,23 @@
         <nav>
             <a href="/" class="btn btn-home">♻️ bener.in</a>
             <div class="nav-right">
-                <a href="/repair/" class="btn btn-ghost">Repair</a>
-                <a href="/history/" class="btn btn-ghost">History</a>
-                <a href="/login/" class="btn btn-outline">Login</a>
-                <a href="/register/" class="btn btn-solid">Register</a>
+                {% if user.is_authenticated %}
+                    {% if user.role == 'customer' %}
+                        <a href="/#cari-mitra" class="btn btn-ghost">Cari Mitra</a>
+                        <a href="/repair/" class="btn btn-ghost">Permintaan Saya</a>
+                    {% elif user.role == 'mitra' %}
+                        <a href="/repair/incoming/" class="btn btn-ghost">Permintaan Masuk</a>
+                        <a href="/mitra/profile/" class="btn btn-ghost">Profil Mitra</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'authentication:logout' %}" class="logout-form">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline">Logout</button>
+                    </form>
+                {% else %}
+                    <a href="/#cari-mitra" class="btn btn-ghost">Cari Mitra</a>
+                    <a href="{% url 'authentication:login' %}" class="btn btn-outline">Login</a>
+                    <a href="{% url 'authentication:register' %}" class="btn btn-solid">Register</a>
+                {% endif %}
             </div>
         </nav>
     </div>

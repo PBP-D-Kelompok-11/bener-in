@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block meta %}<title>Login — bener.in</title>{% endblock meta %}
+
+{% block content %}
+<main class="auth-page">
+  <h1>Login</h1>
+  <p class="auth-lead">Masuk sebagai pemilik barang atau mitra reparasi.</p>
+
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% include 'authentication/_form_fields.html' %}
+    <button type="submit" class="btn btn-solid btn-lg">Login</button>
+  </form>
+
+  <p class="auth-alt">Belum punya akun? <a href="{% url 'authentication:register' %}">Register</a></p>
+</main>
+{% endblock content %}

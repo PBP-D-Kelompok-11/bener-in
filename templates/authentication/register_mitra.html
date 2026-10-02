@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock css %}
+
+{% block meta %}<title>Daftar Mitra — bener.in</title>{% endblock meta %}
+
+{% block content %}
+<main class="auth-page">
+  <h1>Daftar sebagai Mitra Reparasi</h1>
+  <p class="auth-lead">Lengkapi data usahamu supaya pelanggan bisa menemukanmu.</p>
+
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+    {% include 'authentication/_form_fields.html' %}
+
+    <div class="field">
+      <label>Lokasi usaha (klik peta untuk menandai)</label>
+      <div id="pick-map"></div>
+      {% for error in form.latitude.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    <button type="submit" class="btn btn-solid btn-lg">Daftar</button>
+  </form>
+
+  <p class="auth-alt">Sudah punya akun? <a href="{% url 'authentication:login' %}">Login</a> · <a href="{% url 'authentication:register' %}">Ganti peran</a></p>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+  var latEl = document.getElementById('id_latitude');
+  var lngEl = document.getElementById('id_longitude');
+  var hasPoint = latEl.value && lngEl.value;
+  var start = hasPoint ? [parseFloat(latEl.value), parseFloat(lngEl.value)] : [-6.2088, 106.8456];
+
+  var pickMap = L.map('pick-map').setView(start, hasPoint ? 15 : 11);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(pickMap);
+
+  var marker = null;
+  function setPoint(latlng) {
+    if (marker) { marker.setLatLng(latlng); } else { marker = L.marker(latlng).addTo(pickMap); }
+    latEl.value = latlng.lat.toFixed(6);
+    lngEl.value = latlng.lng.toFixed(6);
+  }
+  if (hasPoint) setPoint(L.latLng(start));
+  pickMap.on('click', function (e) { setPoint(e.latlng); });
+</script>
+{% endblock content %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block meta %}<title>Daftar — bener.in</title>{% endblock meta %}
+
+{% block content %}
+<main class="auth-page auth-wide">
+  <h1>Daftar sebagai apa?</h1>
+  <p class="auth-lead">Satu akun hanya untuk satu peran, jadi pilih yang paling sesuai.</p>
+
+  <div class="role-grid">
+    <a class="role role-main" href="{% url 'authentication:register_customer' %}">
+      <h3>Pemilik Barang</h3>
+      <p>Aku punya barang rusak dan ingin mencari mitra untuk memperbaikinya.</p>
+      <span class="btn btn-solid">Daftar sebagai Customer</span>
+    </a>
+    <a class="role" href="{% url 'authentication:register_mitra' %}">
+      <h3>Mitra Reparasi</h3>
+      <p>Aku menerima jasa perbaikan dan ingin mendapat permintaan dari pelanggan.</p>
+      <span class="btn btn-outline">Daftar sebagai Mitra</span>
+    </a>
+  </div>
+
+  <p class="auth-alt">Sudah punya akun? <a href="{% url 'authentication:login' %}">Login</a></p>
+</main>
+{% endblock content %}
