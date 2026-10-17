@@ -56,3 +56,28 @@ class RepairRequestCreateForm(forms.ModelForm):
         if not value:
             raise forms.ValidationError('Jelaskan masalah pada barang.')
         return value
+
+
+class RepairRequestEditForm(forms.ModelForm):
+    class Meta:
+        model = RepairRequest
+        fields = ['item_name', 'description']
+        labels = {
+            'item_name': 'Nama barang',
+            'description': 'Masalah yang dialami',
+        }
+        widgets = {
+            'item_name': forms.TextInput(attrs={
+                'placeholder': 'Contoh: ponsel Samsung A52',
+                'aria-describedby': 'repair-edit-item-hint repair-edit-item-error',
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 6,
+                'placeholder': 'Ceritakan kerusakan, gejala, dan kapan masalah mulai terjadi.',
+                'aria-describedby': 'repair-edit-description-hint repair-edit-description-error',
+            }),
+        }
+        error_messages = {
+            'item_name': {'required': 'Isi nama barang.'},
+            'description': {'required': 'Jelaskan masalah pada barang.'},
+        }

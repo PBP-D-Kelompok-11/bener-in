@@ -2,13 +2,14 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import get_resolver, resolve, reverse
 from django.utils import timezone
 
 from authentication.models import Customer, KategoriBarang, MitraReparasi
 from mitra.models import Mitra
 
+from .forms import RepairRequestEditForm
 from .models import RepairRequest, RepairStatusHistory
 
 
@@ -420,3 +421,254 @@ class RepairCreationViewTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 403)
         self.client.logout()
         self.assertEqual(self.client.get(url).status_code, 302)
+
+
+class RepairManagementViewTests(TestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create_user(
+            username='owner', password='test-password',
+            nama_lengkap='Pemilik Barang', no_hp='0811',
+        )
+        self.other_customer = Customer.objects.create_user(
+            username='other-owner', password='test-password',
+            nama_lengkap='Pelanggan Lain', no_hp='0812',
+        )
+        self.mitra = MitraReparasi.objects.create_user(
+            username='assigned-partner', password='test-password',
+            nama_lengkap='Pemilik Bengkel', no_hp='0813',
+            nama_usaha='Bengkel Daun', layanan=[KategoriBarang.GADGET],
+            alamat='Jakarta', latitude='-6.200000', longitude='106.816666',
+        )
+        self.other_mitra = MitraReparasi.objects.create_user(
+            username='other-assigned-partner', password='test-password',
+            nama_lengkap='Mitra Lain', no_hp='0814',
+            nama_usaha='Bengkel Lain', layanan=[KategoriBarang.SEPEDA],
+            alamat='Depok', latitude='-6.400000', longitude='106.800000',
+        )
+        self.client.force_login(
+            self.customer, backend='authentication.backends.CustomerBackend',
+        )
+
+    def make_request(self, *, customer=None, mitra=None, item_name='Ponsel'):
+        return RepairRequest.objects.create(
+            customer=customer or self.customer,
+            mitra=mitra or self.mitra,
+            category=KategoriBarang.GADGET,
+            item_name=item_name, description='Layar retak.',
+        )
+
+    def test_list_shows_only_owned_requests_and_recent_first(self):
+        older = self.make_request(item_name='Barang Pertama')
+        newer = self.make_request(item_name='Barang Kedua')
+        other = self.make_request(customer=self.other_customer, item_name='Barang Rahasia')
+        newer.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        response = self.client.get(reverse('repair:list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([repair.pk for repair in response.context['repairs']], [newer.pk, older.pk])
+        self.assertContains(response, 'Barang Pertama')
+        self.assertContains(response, 'Barang Kedua')
+        self.assertNotContains(response, other.item_name)
+        self.assertEqual(
+            response.context['repairs'][0].last_status_at,
+            newer.status_history.order_by('-pk').first().occurred_at,
+        )
+
+    def test_list_status_filter_and_empty_states(self):
+        empty = self.client.get(reverse('repair:list'))
+        self.assertContains(empty, 'Belum ada permintaan reparasi')
+        pending = self.make_request(item_name='Barang Pending')
+        accepted = self.make_request(item_name='Barang Accepted')
+        accepted.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        filtered = self.client.get(reverse('repair:list'), {'status': 'accepted'})
+        self.assertEqual([repair.pk for repair in filtered.context['repairs']], [accepted.pk])
+        self.assertNotContains(filtered, pending.item_name)
+        no_match = self.client.get(reverse('repair:list'), {'status': 'completed'})
+        self.assertContains(no_match, 'Tidak ada permintaan berstatus Completed')
+        invalid = self.client.get(reverse('repair:list'), {'status': 'invented'})
+        self.assertEqual(len(invalid.context['repairs']), 2)
+
+    def test_list_anonymous_and_mitra_are_restricted(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse('repair:list')).status_code, 302)
+        self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.client.get(reverse('repair:list')).status_code, 403)
+
+    def test_detail_only_owner_or_assigned_mitra_can_view(self):
+        repair = self.make_request()
+        url = reverse('repair:detail', kwargs={'pk': repair.pk})
+        self.assertContains(self.client.get(url), 'Layar retak.')
+        self.client.force_login(
+            self.other_customer, backend='authentication.backends.CustomerBackend',
+        )
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.other_mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+    def test_detail_displays_only_actual_history_with_actor_and_reason(self):
+        repair = self.make_request()
+        repair.transition_to(RepairRequest.Status.REJECTED, self.mitra, reason='Komponen tidak tersedia.')
+        response = self.client.get(reverse('repair:detail', kwargs={'pk': repair.pk}))
+        self.assertEqual([event.to_status for event in response.context['history']], [
+            RepairRequest.Status.PENDING, RepairRequest.Status.REJECTED,
+        ])
+        self.assertContains(response, 'Rejected')
+        self.assertContains(response, 'Komponen tidak tersedia.')
+        self.assertContains(response, 'Bengkel Daun')
+        self.assertNotContains(response, 'In Progress')
+        self.assertFalse(response.context['can_manage'])
+
+    def test_terminal_outcomes_are_distinct_and_not_editable(self):
+        cancelled = self.make_request(item_name='Barang Cancelled')
+        cancelled.transition_to(RepairRequest.Status.CANCELLED, self.customer)
+        unable = self.make_request(item_name='Barang Unable')
+        unable.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        unable.transition_to(RepairRequest.Status.UNABLE_TO_REPAIR, self.mitra, reason='Kerusakan terlalu berat.')
+        completed = self.make_request(item_name='Barang Completed')
+        completed.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        completed.transition_to(RepairRequest.Status.IN_PROGRESS, self.mitra)
+        completed.transition_to(RepairRequest.Status.COMPLETED, self.mitra)
+        for repair, label in ((cancelled, 'Cancelled'), (unable, 'Unable to Repair'), (completed, 'Completed')):
+            with self.subTest(label=label):
+                response = self.client.get(reverse('repair:detail', kwargs={'pk': repair.pk}))
+                self.assertContains(response, label)
+                self.assertFalse(response.context['can_manage'])
+        self.assertContains(
+            self.client.get(reverse('repair:detail', kwargs={'pk': unable.pk})),
+            'Kerusakan terlalu berat.',
+        )
+
+    def test_pending_edit_changes_only_allowed_fields_and_no_status_history(self):
+        repair = self.make_request()
+        original_event = repair.status_history.get()
+        response = self.client.post(reverse('repair:edit', kwargs={'pk': repair.pk}), {
+            'item_name': 'Tablet',
+            'description': 'Baterai tidak mengisi.',
+            'category': KategoriBarang.SEPEDA,
+            'mitra': str(self.other_mitra.pk),
+            'status': RepairRequest.Status.COMPLETED,
+            'customer': str(self.other_customer.pk),
+        })
+        self.assertRedirects(
+            response, reverse('repair:detail', kwargs={'pk': repair.pk}),
+            fetch_redirect_response=False,
+        )
+        repair.refresh_from_db()
+        self.assertEqual(repair.item_name, 'Tablet')
+        self.assertEqual(repair.description, 'Baterai tidak mengisi.')
+        self.assertEqual(repair.category, KategoriBarang.GADGET)
+        self.assertEqual(repair.mitra, self.mitra)
+        self.assertEqual(repair.customer, self.customer)
+        self.assertEqual(repair.status, RepairRequest.Status.PENDING)
+        self.assertEqual(repair.status_history.count(), 1)
+        self.assertEqual(repair.status_history.get().occurred_at, original_event.occurred_at)
+        self.assertContains(self.client.get(reverse('repair:detail', kwargs={'pk': repair.pk})), 'berhasil diperbarui')
+
+    def test_edit_validation_and_permissions(self):
+        repair = self.make_request()
+        url = reverse('repair:edit', kwargs={'pk': repair.pk})
+        invalid = self.client.post(url, {'item_name': '   ', 'description': '   '})
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn('item_name', invalid.context['form'].errors)
+        self.assertIn('description', invalid.context['form'].errors)
+        self.client.force_login(
+            self.other_customer, backend='authentication.backends.CustomerBackend',
+        )
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.force_login(
+            self.customer, backend='authentication.backends.CustomerBackend',
+        )
+        repair.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        posted = self.client.post(url, {'item_name': 'Diubah', 'description': 'Diubah juga'})
+        self.assertRedirects(posted, reverse('repair:detail', kwargs={'pk': repair.pk}))
+        repair.refresh_from_db()
+        self.assertEqual(repair.item_name, 'Ponsel')
+
+    def test_edit_handles_status_change_during_save(self):
+        repair = self.make_request()
+        original_save = RepairRequestEditForm.save
+
+        def accept_then_save(form, *args, **kwargs):
+            current = RepairRequest.objects.get(pk=repair.pk)
+            current.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+            return original_save(form, *args, **kwargs)
+
+        with patch.object(RepairRequestEditForm, 'save', new=accept_then_save):
+            response = self.client.post(reverse('repair:edit', kwargs={'pk': repair.pk}), {
+                'item_name': 'Edit terlambat', 'description': 'Tidak boleh tersimpan.',
+            })
+        self.assertRedirects(response, reverse('repair:detail', kwargs={'pk': repair.pk}))
+        repair.refresh_from_db()
+        self.assertEqual(repair.status, RepairRequest.Status.ACCEPTED)
+        self.assertEqual(repair.item_name, 'Ponsel')
+        self.assertEqual(repair.status_history.count(), 2)
+
+    def test_cancel_requires_confirmation_post_and_keeps_history(self):
+        repair = self.make_request()
+        url = reverse('repair:cancel', kwargs={'pk': repair.pk})
+        confirmation = self.client.get(url)
+        self.assertContains(confirmation, 'Batalkan permintaan ini?')
+        self.assertEqual(repair.status_history.count(), 1)
+        response = self.client.post(url)
+        self.assertRedirects(
+            response, reverse('repair:detail', kwargs={'pk': repair.pk}),
+            fetch_redirect_response=False,
+        )
+        repair.refresh_from_db()
+        self.assertEqual(repair.status, RepairRequest.Status.CANCELLED)
+        event = repair.status_history.order_by('-pk').first()
+        self.assertEqual(event.from_status, RepairRequest.Status.PENDING)
+        self.assertEqual(event.to_status, RepairRequest.Status.CANCELLED)
+        self.assertEqual(event.customer_actor, self.customer)
+        self.assertTrue(timezone.is_aware(event.occurred_at))
+        self.assertTrue(RepairRequest.objects.filter(pk=repair.pk).exists())
+        self.assertContains(self.client.get(reverse('repair:detail', kwargs={'pk': repair.pk})), 'berhasil dibatalkan')
+        second = self.client.post(url)
+        self.assertRedirects(second, reverse('repair:detail', kwargs={'pk': repair.pk}))
+        self.assertEqual(repair.status_history.count(), 2)
+
+    def test_cancel_permissions_and_csrf(self):
+        repair = self.make_request()
+        url = reverse('repair:cancel', kwargs={'pk': repair.pk})
+        self.client.force_login(
+            self.other_customer, backend='authentication.backends.CustomerBackend',
+        )
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.client.post(url).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.post(url).status_code, 302)
+        protected_client = Client(enforce_csrf_checks=True)
+        protected_client.force_login(
+            self.customer, backend='authentication.backends.CustomerBackend',
+        )
+        self.assertEqual(protected_client.post(url).status_code, 403)
+        self.assertEqual(repair.status_history.count(), 1)
+
+    def test_cancel_handles_competing_acceptance(self):
+        repair = self.make_request()
+        url = reverse('repair:cancel', kwargs={'pk': repair.pk})
+        original_transition = RepairRequest.transition_to
+
+        def accept_then_cancel(instance, status, actor, reason=''):
+            if status == RepairRequest.Status.CANCELLED:
+                current = RepairRequest.objects.get(pk=repair.pk)
+                original_transition(current, RepairRequest.Status.ACCEPTED, self.mitra)
+            return original_transition(instance, status, actor, reason=reason)
+
+        with patch.object(RepairRequest, 'transition_to', new=accept_then_cancel):
+            response = self.client.post(url)
+        self.assertRedirects(response, reverse('repair:detail', kwargs={'pk': repair.pk}))
+        repair.refresh_from_db()
+        self.assertEqual(repair.status, RepairRequest.Status.ACCEPTED)
+        self.assertEqual(
+            list(repair.status_history.values_list('to_status', flat=True)),
+            [RepairRequest.Status.PENDING, RepairRequest.Status.ACCEPTED],
+        )

@@ -20,8 +20,8 @@
             </dl>
             <p class="repair-confirmation__note">Simpan nomor permintaan ini sebagai referensi. Mitra penerima dan status awal tercantum di atas.</p>
             <div class="repair-actions">
-                <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan barang lain</a>
-                <a class="repair-button repair-button--quiet" href="/">Kembali ke beranda</a>
+                <a class="repair-button repair-button--primary" href="{% url 'repair:detail' repair.pk %}">Lihat detail permintaan</a>
+                <a class="repair-button repair-button--quiet" href="{% url 'repair:create' %}">Ajukan barang lain</a>
             </div>
         </div>
     </div>

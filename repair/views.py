@@ -1,16 +1,18 @@
 from uuid import uuid4
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.http import HttpResponseForbidden
+from django.db.models import OuterRef, Subquery
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 
 from authentication.models import Customer, KategoriBarang, MitraReparasi
 
-from .forms import RepairRequestCreateForm
-from .models import RepairRequest
+from .forms import RepairRequestCreateForm, RepairRequestEditForm
+from .models import RepairRequest, RepairStatusHistory
 
 
 TOKEN_SALT = 'repair-request-create'
@@ -84,6 +86,153 @@ def _render_create(request, form, token, *, preview=False):
 
 def _customer_allowed(request):
     return isinstance(request.user, Customer) and request.user.role == 'customer' and request.user.is_active
+
+
+def _mitra_allowed(request):
+    return isinstance(request.user, MitraReparasi) and request.user.role == 'mitra' and request.user.is_active
+
+
+STATUS_GUIDANCE = {
+    RepairRequest.Status.PENDING: 'Permintaan sedang menunggu tanggapan mitra.',
+    RepairRequest.Status.ACCEPTED: 'Mitra telah menerima permintaan ini.',
+    RepairRequest.Status.IN_PROGRESS: 'Barang sedang dalam proses reparasi.',
+    RepairRequest.Status.COMPLETED: 'Reparasi telah selesai.',
+    RepairRequest.Status.REJECTED: 'Mitra menolak permintaan ini. Lihat alasannya di riwayat status.',
+    RepairRequest.Status.CANCELLED: 'Permintaan ini telah dibatalkan oleh pelanggan.',
+    RepairRequest.Status.UNABLE_TO_REPAIR: 'Mitra tidak dapat menyelesaikan reparasi. Lihat alasannya di riwayat status.',
+}
+
+
+@login_required
+def request_list(request):
+    if not _customer_allowed(request):
+        return HttpResponseForbidden('Hanya akun Customer yang dapat melihat daftar permintaan.')
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+
+    status_filter = request.GET.get('status', 'all')
+    if status_filter not in RepairRequest.Status.values:
+        status_filter = 'all'
+    owned = RepairRequest.objects.filter(customer=request.user)
+    latest_event = RepairStatusHistory.objects.filter(
+        request_id=OuterRef('pk'),
+    ).order_by('-pk')
+    repairs = owned.select_related('mitra').annotate(
+        last_status_at=Subquery(latest_event.values('occurred_at')[:1]),
+    )
+    if status_filter != 'all':
+        repairs = repairs.filter(status=status_filter)
+    repairs = repairs.order_by('-created_at', '-pk')
+    filters = [{'value': 'all', 'label': 'Semua'}] + [
+        {'value': value, 'label': label}
+        for value, label in RepairRequest.Status.choices
+    ]
+    return render(request, 'repair/request_list.html', {
+        'repairs': repairs,
+        'has_any_requests': owned.exists(),
+        'status_filter': status_filter,
+        'filters': filters,
+        'selected_filter_label': next(
+            item['label'] for item in filters if item['value'] == status_filter
+        ),
+    })
+
+
+@login_required
+def request_detail(request, pk):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    if _customer_allowed(request):
+        repairs = RepairRequest.objects.filter(customer=request.user)
+        viewer_is_customer = True
+    elif _mitra_allowed(request):
+        repairs = RepairRequest.objects.filter(mitra=request.user)
+        viewer_is_customer = False
+    else:
+        return HttpResponseForbidden('Akun ini tidak dapat melihat permintaan reparasi.')
+
+    repair = get_object_or_404(
+        repairs.select_related('customer', 'mitra'), pk=pk,
+    )
+    history = list(repair.status_history.select_related(
+        'customer_actor', 'mitra_actor',
+    ).order_by('occurred_at', 'pk'))
+    for event in history:
+        if event.customer_actor_id:
+            event.actor_label = 'Anda' if viewer_is_customer else event.customer_actor.nama_lengkap
+        elif event.mitra_actor_id:
+            event.actor_label = event.mitra_actor.nama_usaha if viewer_is_customer else 'Anda'
+        else:
+            event.actor_label = 'Tidak diketahui'
+    latest_event = max(history, key=lambda event: event.pk, default=None)
+    return render(request, 'repair/request_detail.html', {
+        'repair': repair,
+        'history': history,
+        'latest_event': latest_event,
+        'viewer_is_customer': viewer_is_customer,
+        'can_manage': viewer_is_customer and repair.status == RepairRequest.Status.PENDING,
+        'status_guidance': STATUS_GUIDANCE.get(repair.status, ''),
+    })
+
+
+@login_required
+def edit_request(request, pk):
+    if not _customer_allowed(request):
+        return HttpResponseForbidden('Hanya pemilik permintaan yang dapat mengedit.')
+    if request.method not in ('GET', 'POST'):
+        return HttpResponseNotAllowed(['GET', 'POST'])
+    repair = get_object_or_404(
+        RepairRequest.objects.select_related('mitra'), pk=pk, customer=request.user,
+    )
+    if repair.status != RepairRequest.Status.PENDING:
+        if request.method == 'POST':
+            messages.error(request, 'Status permintaan telah berubah. Detail tidak dapat diedit lagi.')
+            return redirect('repair:detail', pk=repair.pk)
+        return HttpResponseForbidden('Hanya permintaan Pending yang dapat diedit.')
+
+    form = RepairRequestEditForm(request.POST or None, instance=repair)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            form.save()
+        except ValidationError as error:
+            repair.refresh_from_db()
+            if repair.status != RepairRequest.Status.PENDING:
+                messages.error(request, 'Status permintaan berubah saat disimpan. Detail tidak diubah.')
+                return redirect('repair:detail', pk=repair.pk)
+            if hasattr(error, 'message_dict'):
+                for field, errors in error.message_dict.items():
+                    form.add_error(field if field in form.fields else None, errors)
+            else:
+                form.add_error(None, error)
+        else:
+            messages.success(request, 'Detail permintaan berhasil diperbarui.')
+            return redirect('repair:detail', pk=repair.pk)
+    return render(request, 'repair/request_edit.html', {'repair': repair, 'form': form})
+
+
+@login_required
+def cancel_request(request, pk):
+    if not _customer_allowed(request):
+        return HttpResponseForbidden('Hanya pemilik permintaan yang dapat membatalkan.')
+    if request.method not in ('GET', 'POST'):
+        return HttpResponseNotAllowed(['GET', 'POST'])
+    repair = get_object_or_404(
+        RepairRequest.objects.select_related('mitra'), pk=pk, customer=request.user,
+    )
+    if repair.status != RepairRequest.Status.PENDING:
+        if request.method == 'POST':
+            messages.error(request, 'Status permintaan telah berubah. Pembatalan tidak dapat dilakukan.')
+            return redirect('repair:detail', pk=repair.pk)
+        return HttpResponseForbidden('Hanya permintaan Pending yang dapat dibatalkan.')
+    if request.method == 'POST':
+        try:
+            repair.transition_to(RepairRequest.Status.CANCELLED, request.user)
+        except ValidationError:
+            messages.error(request, 'Status permintaan berubah saat dibatalkan. Muat ulang detail permintaan.')
+        else:
+            messages.success(request, 'Permintaan berhasil dibatalkan. Riwayatnya tetap tersimpan.')
+        return redirect('repair:detail', pk=repair.pk)
+    return render(request, 'repair/request_cancel.html', {'repair': repair})
 
 
 @login_required

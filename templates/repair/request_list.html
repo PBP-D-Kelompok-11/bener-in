@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Permintaan Saya | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--list">
+    <div class="repair-shell">
+        {% include 'repair/_messages.html' %}
+        <div class="repair-page-heading">
+            <div>
+                <p class="repair-eyebrow">Ruang reparasimu</p>
+                <h1>Permintaan Saya</h1>
+                <p>Lihat perkembangan barang yang sedang dan pernah kamu percayakan kepada mitra.</p>
+            </div>
+            <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi baru <span aria-hidden="true">→</span></a>
+        </div>
+
+        <nav class="repair-filters" aria-label="Saring berdasarkan status">
+            {% for option in filters %}
+            <a href="{% url 'repair:list' %}{% if option.value != 'all' %}?status={{ option.value }}{% endif %}"
+               class="repair-filter{% if status_filter == option.value %} is-active{% endif %}"
+               {% if status_filter == option.value %}aria-current="page"{% endif %}>{{ option.label }}</a>
+            {% endfor %}
+        </nav>
+
+        {% if repairs %}
+        <div class="repair-request-grid">
+            {% for repair in repairs %}
+            <article class="repair-request-card">
+                <div class="repair-request-card__top">
+                    <span class="repair-request-card__id">Permintaan #{{ repair.pk }}</span>
+                    {% include 'repair/_status_badge.html' with status=repair.status label=repair.get_status_display %}
+                </div>
+                <h2><a href="{% url 'repair:detail' repair.pk %}">{{ repair.item_name }}</a></h2>
+                <dl class="repair-request-card__facts">
+                    <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
+                    <div><dt>Mitra</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
+                    <div>
+                        <dt>{% if repair.last_status_at %}Pembaruan status{% else %}Dibuat{% endif %}</dt>
+                        <dd><time datetime="{% if repair.last_status_at %}{{ repair.last_status_at|date:'c' }}{% else %}{{ repair.created_at|date:'c' }}{% endif %}">{% if repair.last_status_at %}{{ repair.last_status_at|date:'d M Y, H:i' }}{% else %}{{ repair.created_at|date:'d M Y, H:i' }}{% endif %} UTC</time></dd>
+                    </div>
+                </dl>
+                <a class="repair-text-link" href="{% url 'repair:detail' repair.pk %}">Lihat detail <span aria-hidden="true">→</span></a>
+            </article>
+            {% endfor %}
+        </div>
+        {% elif has_any_requests %}
+        <div class="repair-empty-state">
+            <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
+            <h2>Tidak ada permintaan berstatus {{ selected_filter_label }}.</h2>
+            <p>Coba lihat semua permintaan untuk menemukan riwayat barangmu.</p>
+            <a class="repair-button repair-button--quiet" href="{% url 'repair:list' %}">Lihat semua permintaan</a>
+        </div>
+        {% else %}
+        <div class="repair-empty-state">
+            <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
+            <h2>Belum ada permintaan reparasi.</h2>
+            <p>Mulai dari satu barang yang ingin kamu gunakan lebih lama.</p>
+            <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi pertama</a>
+        </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock content %}
