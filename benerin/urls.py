@@ -23,4 +23,5 @@ urlpatterns = [
     path('', include('main.urls')),
     path('', include('authentication.urls')),
     path('reviews/', include('reviews.urls')),
+    path('mitra/', include('mitra.urls')),
 ]

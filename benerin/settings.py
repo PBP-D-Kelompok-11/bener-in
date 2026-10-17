@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'main',
     'authentication',
     'reviews', 
+    'mitra',
 ]
 
 MIDDLEWARE = [
