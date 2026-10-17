@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "hisyam-prasetyo-benerin.pws.cs.ui.ac
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 CSRF_TRUSTED_ORIGINS = [
     'https://muhammad-akmal53-benerin.pws.cs.ui.ac.id',
+    
 ]
 
 # Application definition
