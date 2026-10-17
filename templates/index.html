@@ -134,6 +134,9 @@
         <span style="width:60%"></span>
       </div>
       <p class="meter-label">3 dari 5 barang diselamatkan</p>
+      {% if user.is_authenticated %}
+      <a href="{% url 'reviews:impact' %}" class="btn btn-solid">Lihat impact-mu</a>
+      {% endif %}
     </div>
   </section>
 </main>
