@@ -1,0 +1,40 @@
+"""Logika Impact Tracker (Modul E).
+"""
+
+BADGES = [
+    {"name": "Pemula Peduli", "min": 1, "icon": "🌱"},
+    {"name": "Penyelamat Barang", "min": 5, "icon": "🔧"},
+    {"name": "Pahlawan Reparasi", "min": 10, "icon": "♻️"},
+    {"name": "Duta Repair Before Replace", "min": 25, "icon": "🌍"},
+]
+
+
+def get_impact_summary(saved_count):
+    """badge progress"""
+    badges = [{**b, "unlocked": saved_count >= b["min"]} for b in BADGES]
+
+    current_badge = None
+    next_badge = None
+    for badge in badges:
+        if badge["unlocked"]:
+            current_badge = badge
+        elif next_badge is None:
+            next_badge = badge
+
+    if next_badge is None:
+        progress_percent = 100
+        remaining = 0
+    else:
+        start = current_badge["min"] if current_badge else 0
+        span = next_badge["min"] - start
+        progress_percent = int((saved_count - start) / span * 100)
+        remaining = next_badge["min"] - saved_count
+
+    return {
+        "saved_count": saved_count,
+        "badges": badges,
+        "current_badge": current_badge,
+        "next_badge": next_badge,
+        "progress_percent": progress_percent,
+        "remaining": remaining,
+    }

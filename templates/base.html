@@ -28,6 +28,7 @@
                     {% if user.role == 'customer' %}
                         <a href="/#cari-mitra" class="btn btn-ghost">Cari Mitra</a>
                         <a href="/repair/" class="btn btn-ghost">Permintaan Saya</a>
+                        <a href="{% url 'reviews:impact' %}" class="btn btn-ghost">Impact</a>
                     {% elif user.role == 'mitra' %}
                         <a href="/repair/incoming/" class="btn btn-ghost">Permintaan Masuk</a>
                         <a href="/mitra/profile/" class="btn btn-ghost">Profil Mitra</a>
