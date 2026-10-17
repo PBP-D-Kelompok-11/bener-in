@@ -1,5 +1,10 @@
-"""Module B route namespace; page routes arrive in later milestones."""
+from django.urls import path
+
+from . import views
 
 app_name = 'repair'
 
-urlpatterns = []
+urlpatterns = [
+    path('new/', views.create_request, name='create'),
+    path('submitted/<int:pk>/', views.request_confirmation, name='confirmation'),
+]

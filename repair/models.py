@@ -44,6 +44,9 @@ class RepairRequest(models.Model):
     category = models.CharField(max_length=20, choices=KategoriBarang.choices)
     item_name = models.CharField(max_length=150)
     description = models.TextField()
+    submission_token = models.CharField(
+        max_length=255, unique=True, null=True, blank=True, editable=False,
+    )
     status = models.CharField(
         max_length=20, choices=Status.choices,
         default=Status.PENDING, editable=False,
