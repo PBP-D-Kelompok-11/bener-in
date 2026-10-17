@@ -1,0 +1,32 @@
+<article class="repair-work-card" data-request-id="{{ repair.pk }}">
+    <div class="repair-work-card__top">
+        <span class="repair-request-card__id">Permintaan #{{ repair.pk }}</span>
+        {% include 'repair/_status_badge.html' with status=repair.status label=repair.get_status_display %}
+    </div>
+    <h3><a href="{% url 'repair:detail' repair.pk %}">{{ repair.item_name }}</a></h3>
+    <dl class="repair-work-card__facts">
+        <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
+        <div><dt>Pelanggan</dt><dd>{{ repair.customer.nama_lengkap }}</dd></div>
+        <div><dt>Diajukan</dt><dd><time datetime="{{ repair.created_at|date:'c' }}">{{ repair.created_at|date:'d M Y, H:i' }} UTC</time></dd></div>
+    </dl>
+    <p class="repair-work-card__issue">{{ repair.description|truncatechars:180 }}</p>
+    <div class="repair-work-card__footer">
+        <a class="repair-text-link" href="{% url 'repair:detail' repair.pk %}">Lihat detail <span aria-hidden="true">→</span></a>
+        {% if repair.status == 'pending' %}
+        <div class="repair-work-card__actions">
+            {% include 'repair/_mitra_action.html' with target='accepted' label='Terima' %}
+            {% include 'repair/_mitra_action.html' with target='rejected' label='Tolak' reason_required=True %}
+        </div>
+        {% elif repair.status == 'accepted' %}
+        <div class="repair-work-card__actions">
+            {% include 'repair/_mitra_action.html' with target='in_progress' label='Mulai reparasi' %}
+            {% include 'repair/_mitra_action.html' with target='unable_to_repair' label='Tidak dapat diperbaiki' reason_required=True %}
+        </div>
+        {% elif repair.status == 'in_progress' %}
+        <div class="repair-work-card__actions">
+            {% include 'repair/_mitra_action.html' with target='completed' label='Tandai selesai' %}
+            {% include 'repair/_mitra_action.html' with target='unable_to_repair' label='Tidak dapat diperbaiki' reason_required=True %}
+        </div>
+        {% endif %}
+    </div>
+</article>

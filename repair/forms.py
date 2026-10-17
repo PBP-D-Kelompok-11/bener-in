@@ -1,6 +1,6 @@
 from django import forms
 
-from authentication.models import MitraReparasi
+from authentication.models import KategoriBarang, MitraReparasi
 
 from .models import RepairRequest
 
@@ -43,6 +43,7 @@ class RepairRequestCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['category'].choices = KategoriBarang.choices
         self.fields['mitra'].queryset = MitraReparasi.objects.filter(is_active=True)
 
     def clean_item_name(self):
@@ -81,3 +82,15 @@ class RepairRequestEditForm(forms.ModelForm):
             'item_name': {'required': 'Isi nama barang.'},
             'description': {'required': 'Jelaskan masalah pada barang.'},
         }
+
+
+class MitraTransitionForm(forms.Form):
+    expected_status = forms.ChoiceField(choices=RepairRequest.Status.choices)
+    to_status = forms.ChoiceField(choices=[
+        (RepairRequest.Status.ACCEPTED, 'Terima permintaan'),
+        (RepairRequest.Status.REJECTED, 'Tolak permintaan'),
+        (RepairRequest.Status.IN_PROGRESS, 'Mulai reparasi'),
+        (RepairRequest.Status.COMPLETED, 'Selesaikan reparasi'),
+        (RepairRequest.Status.UNABLE_TO_REPAIR, 'Tidak dapat diperbaiki'),
+    ])
+    reason = forms.CharField(required=False, strip=True, widget=forms.Textarea)

@@ -5,13 +5,17 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db.models import OuterRef, Subquery
-from django.http import HttpResponseForbidden, HttpResponseNotAllowed
+from django.db.models import Count, OuterRef, Q, Subquery
+from django.http import (
+    HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.urls import reverse
 
 from authentication.models import Customer, KategoriBarang, MitraReparasi
 
-from .forms import RepairRequestCreateForm, RepairRequestEditForm
+from .forms import MitraTransitionForm, RepairRequestCreateForm, RepairRequestEditForm
 from .models import RepairRequest, RepairStatusHistory
 
 
@@ -102,6 +106,146 @@ STATUS_GUIDANCE = {
     RepairRequest.Status.UNABLE_TO_REPAIR: 'Mitra tidak dapat menyelesaikan reparasi. Lihat alasannya di riwayat status.',
 }
 
+MITRA_GROUPS = {
+    'incoming': (RepairRequest.Status.PENDING,),
+    'active': (RepairRequest.Status.ACCEPTED, RepairRequest.Status.IN_PROGRESS),
+    'history': (
+        RepairRequest.Status.COMPLETED, RepairRequest.Status.REJECTED,
+        RepairRequest.Status.CANCELLED, RepairRequest.Status.UNABLE_TO_REPAIR,
+    ),
+}
+
+
+def _is_ajax(request):
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+def _mitra_dashboard_context(request):
+    group = request.GET.get('group', 'incoming')
+    if group not in MITRA_GROUPS:
+        group = 'incoming'
+    category = request.GET.get('category', '')
+    if category not in KategoriBarang.values:
+        category = ''
+    status = request.GET.get('status', '')
+    if status not in RepairRequest.Status.values:
+        status = ''
+    search = request.GET.get('q', '').strip()
+
+    assigned = RepairRequest.objects.filter(mitra=request.user)
+    by_status = {
+        row['status']: row['total']
+        for row in assigned.values('status').annotate(total=Count('pk'))
+    }
+    counts = {
+        key: sum(by_status.get(value, 0) for value in statuses)
+        for key, statuses in MITRA_GROUPS.items()
+    }
+    repairs = assigned.filter(status__in=MITRA_GROUPS[group]).select_related('customer')
+    if category:
+        repairs = repairs.filter(category=category)
+    if status:
+        repairs = repairs.filter(status=status)
+    if search:
+        repairs = repairs.filter(
+            Q(item_name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(customer__nama_lengkap__icontains=search)
+            | Q(customer__username__icontains=search)
+        )
+    repairs = repairs.order_by('-created_at', '-pk')
+    return {
+        'repairs': repairs,
+        'result_count': repairs.count(),
+        'counts': counts,
+        'group': group,
+        'category_filter': category,
+        'status_filter': status,
+        'search_query': search,
+        'category_choices': KategoriBarang.choices,
+        'status_choices': RepairRequest.Status.choices,
+        'filter_query': request.GET.urlencode(),
+    }
+
+
+@login_required
+def mitra_dashboard(request):
+    if not _mitra_allowed(request):
+        return HttpResponseForbidden('Hanya akun Mitra yang dapat melihat permintaan masuk.')
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    context = _mitra_dashboard_context(request)
+    template = 'repair/_mitra_results.html' if _is_ajax(request) else 'repair/mitra_dashboard.html'
+    return render(request, template, context)
+
+
+def _mitra_action_response(request, status_code, message, *, errors=None, event=None, repair=None):
+    if _is_ajax(request):
+        if event is None:
+            return JsonResponse({'ok': False, 'error': message, 'errors': errors or {}}, status=status_code)
+        context = _mitra_dashboard_context(request)
+        return JsonResponse({
+            'ok': True,
+            'message': message,
+            'request': {
+                'id': repair.pk,
+                'status': repair.status,
+                'status_label': repair.get_status_display(),
+            },
+            'event': {
+                'id': event.pk,
+                'from_status': event.from_status,
+                'to_status': event.to_status,
+                'occurred_at': event.occurred_at.isoformat(),
+                'reason': event.reason,
+                'actor': request.user.nama_usaha,
+            },
+            'counts': context['counts'],
+            'results_html': render_to_string('repair/_mitra_results.html', context, request=request),
+        })
+    if status_code == 200:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    destination = reverse('repair:incoming')
+    if request.GET:
+        destination += '?' + request.GET.urlencode()
+    return HttpResponseRedirect(destination)
+
+
+@login_required
+def mitra_transition(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not _mitra_allowed(request):
+        return _mitra_action_response(request, 403, 'Hanya mitra yang dituju dapat mengubah status.')
+    repair = RepairRequest.objects.filter(pk=pk, mitra=request.user).first()
+    if repair is None:
+        return _mitra_action_response(request, 404, 'Permintaan ini tidak tersedia untuk akun Anda.')
+
+    form = MitraTransitionForm(request.POST)
+    if not form.is_valid():
+        errors = {field: list(values) for field, values in form.errors.items()}
+        message = next(iter(form.errors.values()))[0]
+        return _mitra_action_response(request, 400, message, errors=errors)
+    target = form.cleaned_data['to_status']
+    expected = form.cleaned_data['expected_status']
+    if repair.status != expected:
+        return _mitra_action_response(request, 409, 'Status permintaan telah berubah. Muat ulang daftar sebelum mencoba lagi.')
+    if RepairRequest.TRANSITIONS.get(expected, {}).get(target) != 'mitra':
+        return _mitra_action_response(request, 400, 'Perubahan status ini tidak diizinkan.')
+    if target in RepairRequest.REASON_REQUIRED and not form.cleaned_data['reason']:
+        message = 'Alasan wajib diisi untuk keputusan ini.'
+        return _mitra_action_response(request, 400, message, errors={'reason': [message]})
+    try:
+        event = repair.transition_to(target, request.user, reason=form.cleaned_data['reason'])
+    except ValidationError:
+        repair.refresh_from_db()
+        if repair.status != expected:
+            return _mitra_action_response(request, 409, 'Status permintaan telah berubah. Muat ulang daftar sebelum mencoba lagi.')
+        return _mitra_action_response(request, 400, 'Perubahan status tidak valid. Periksa isian dan coba lagi.')
+    return _mitra_action_response(request, 200, 'Status permintaan berhasil diperbarui.', event=event, repair=repair)
+
 
 @login_required
 def request_list(request):
@@ -110,9 +254,13 @@ def request_list(request):
     if request.method != 'GET':
         return HttpResponseNotAllowed(['GET'])
 
-    status_filter = request.GET.get('status', 'all')
+    status_filter = request.GET.get('status', '')
     if status_filter not in RepairRequest.Status.values:
-        status_filter = 'all'
+        status_filter = ''
+    category_filter = request.GET.get('category', '')
+    if category_filter not in KategoriBarang.values:
+        category_filter = ''
+    search_query = request.GET.get('q', '').strip()
     owned = RepairRequest.objects.filter(customer=request.user)
     latest_event = RepairStatusHistory.objects.filter(
         request_id=OuterRef('pk'),
@@ -120,21 +268,27 @@ def request_list(request):
     repairs = owned.select_related('mitra').annotate(
         last_status_at=Subquery(latest_event.values('occurred_at')[:1]),
     )
-    if status_filter != 'all':
+    if status_filter:
         repairs = repairs.filter(status=status_filter)
+    if category_filter:
+        repairs = repairs.filter(category=category_filter)
+    if search_query:
+        repairs = repairs.filter(
+            Q(item_name__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(mitra__nama_usaha__icontains=search_query)
+        )
     repairs = repairs.order_by('-created_at', '-pk')
-    filters = [{'value': 'all', 'label': 'Semua'}] + [
-        {'value': value, 'label': label}
-        for value, label in RepairRequest.Status.choices
-    ]
-    return render(request, 'repair/request_list.html', {
+    return render(request, 'repair/_customer_results.html' if _is_ajax(request) else 'repair/request_list.html', {
         'repairs': repairs,
+        'result_count': repairs.count(),
         'has_any_requests': owned.exists(),
         'status_filter': status_filter,
-        'filters': filters,
-        'selected_filter_label': next(
-            item['label'] for item in filters if item['value'] == status_filter
-        ),
+        'category_filter': category_filter,
+        'search_query': search_query,
+        'status_choices': RepairRequest.Status.choices,
+        'category_choices': KategoriBarang.choices,
+        'selected_filter_label': dict(RepairRequest.Status.choices).get(status_filter),
     })
 
 

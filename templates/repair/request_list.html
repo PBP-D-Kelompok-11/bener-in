@@ -5,7 +5,7 @@
 {% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
 
 {% block content %}
-<main class="repair-page repair-page--list">
+<main class="repair-page repair-page--list" data-customer-list>
     <div class="repair-shell">
         {% include 'repair/_messages.html' %}
         <div class="repair-page-heading">
@@ -17,50 +17,37 @@
             <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi baru <span aria-hidden="true">→</span></a>
         </div>
 
-        <nav class="repair-filters" aria-label="Saring berdasarkan status">
-            {% for option in filters %}
-            <a href="{% url 'repair:list' %}{% if option.value != 'all' %}?status={{ option.value }}{% endif %}"
-               class="repair-filter{% if status_filter == option.value %} is-active{% endif %}"
-               {% if status_filter == option.value %}aria-current="page"{% endif %}>{{ option.label }}</a>
-            {% endfor %}
-        </nav>
+        <form class="repair-list-filters" method="get" action="{% url 'repair:list' %}" data-customer-filters role="search">
+            <div class="repair-list-filter-field repair-list-filter-field--search">
+                <label for="repair-list-search">Cari permintaan</label>
+                <input id="repair-list-search" type="search" name="q" value="{{ search_query }}" placeholder="Barang atau mitra" autocomplete="off">
+            </div>
+            <div class="repair-list-filter-field">
+                <label for="repair-list-status">Status</label>
+                <select id="repair-list-status" name="status">
+                    <option value="">Semua status</option>
+                    {% for value, label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="repair-list-filter-field">
+                <label for="repair-list-category">Kategori</label>
+                <select id="repair-list-category" name="category">
+                    <option value="">Semua kategori</option>
+                    {% for value, label in category_choices %}<option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="repair-list-filter-actions">
+                <button class="repair-button repair-button--primary" type="submit">Terapkan</button>
+                <a class="repair-button repair-button--quiet" href="{% url 'repair:list' %}" data-customer-reset>Reset</a>
+            </div>
+        </form>
 
-        {% if repairs %}
-        <div class="repair-request-grid">
-            {% for repair in repairs %}
-            <article class="repair-request-card">
-                <div class="repair-request-card__top">
-                    <span class="repair-request-card__id">Permintaan #{{ repair.pk }}</span>
-                    {% include 'repair/_status_badge.html' with status=repair.status label=repair.get_status_display %}
-                </div>
-                <h2><a href="{% url 'repair:detail' repair.pk %}">{{ repair.item_name }}</a></h2>
-                <dl class="repair-request-card__facts">
-                    <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
-                    <div><dt>Mitra</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
-                    <div>
-                        <dt>{% if repair.last_status_at %}Pembaruan status{% else %}Dibuat{% endif %}</dt>
-                        <dd><time datetime="{% if repair.last_status_at %}{{ repair.last_status_at|date:'c' }}{% else %}{{ repair.created_at|date:'c' }}{% endif %}">{% if repair.last_status_at %}{{ repair.last_status_at|date:'d M Y, H:i' }}{% else %}{{ repair.created_at|date:'d M Y, H:i' }}{% endif %} UTC</time></dd>
-                    </div>
-                </dl>
-                <a class="repair-text-link" href="{% url 'repair:detail' repair.pk %}">Lihat detail <span aria-hidden="true">→</span></a>
-            </article>
-            {% endfor %}
+        <p class="repair-sr-only" role="status" aria-live="polite" data-customer-live></p>
+        <div class="repair-ajax-notice" role="status" hidden data-customer-notice></div>
+        <div data-customer-results aria-busy="false">
+            {% include 'repair/_customer_results.html' %}
         </div>
-        {% elif has_any_requests %}
-        <div class="repair-empty-state">
-            <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
-            <h2>Tidak ada permintaan berstatus {{ selected_filter_label }}.</h2>
-            <p>Coba lihat semua permintaan untuk menemukan riwayat barangmu.</p>
-            <a class="repair-button repair-button--quiet" href="{% url 'repair:list' %}">Lihat semua permintaan</a>
-        </div>
-        {% else %}
-        <div class="repair-empty-state">
-            <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
-            <h2>Belum ada permintaan reparasi.</h2>
-            <p>Mulai dari satu barang yang ingin kamu gunakan lebih lama.</p>
-            <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi pertama</a>
-        </div>
-        {% endif %}
     </div>
 </main>
+<script src="{% static 'js/repair.js' %}" defer></script>
 {% endblock content %}

@@ -1,0 +1,46 @@
+<section class="repair-customer-results" data-customer-result-content data-result-count="{{ result_count }}" aria-labelledby="repair-results-heading">
+    <div class="repair-results-heading">
+        <h2 id="repair-results-heading">Daftar permintaan</h2>
+        <p>{{ result_count }} permintaan</p>
+    </div>
+    {% if repairs %}
+    <div class="repair-request-grid">
+        {% for repair in repairs %}
+        <article class="repair-request-card">
+            <div class="repair-request-card__top">
+                <span class="repair-request-card__id">Permintaan #{{ repair.pk }}</span>
+                {% include 'repair/_status_badge.html' with status=repair.status label=repair.get_status_display %}
+            </div>
+            <h3><a href="{% url 'repair:detail' repair.pk %}">{{ repair.item_name }}</a></h3>
+            <dl class="repair-request-card__facts">
+                <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
+                <div><dt>Mitra</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
+                <div>
+                    <dt>{% if repair.last_status_at %}Pembaruan status{% else %}Dibuat{% endif %}</dt>
+                    <dd><time datetime="{% if repair.last_status_at %}{{ repair.last_status_at|date:'c' }}{% else %}{{ repair.created_at|date:'c' }}{% endif %}">{% if repair.last_status_at %}{{ repair.last_status_at|date:'d M Y, H:i' }}{% else %}{{ repair.created_at|date:'d M Y, H:i' }}{% endif %} UTC</time></dd>
+                </div>
+            </dl>
+            <a class="repair-text-link" href="{% url 'repair:detail' repair.pk %}">Lihat detail <span aria-hidden="true">→</span></a>
+        </article>
+        {% endfor %}
+    </div>
+    {% elif has_any_requests %}
+    <div class="repair-empty-state">
+        <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
+        {% if status_filter and not category_filter and not search_query %}
+        <h3>Tidak ada permintaan berstatus {{ selected_filter_label }}.</h3>
+        {% else %}
+        <h3>Tidak ada hasil yang cocok.</h3>
+        {% endif %}
+        <p>Coba ubah pencarian atau reset filter untuk melihat permintaan lain.</p>
+        <a class="repair-button repair-button--quiet" href="{% url 'repair:list' %}" data-customer-reset>Lihat semua permintaan</a>
+    </div>
+    {% else %}
+    <div class="repair-empty-state">
+        <span class="repair-empty-state__symbol" aria-hidden="true">↻</span>
+        <h3>Belum ada permintaan reparasi.</h3>
+        <p>Mulai dari satu barang yang ingin kamu gunakan lebih lama.</p>
+        <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi pertama</a>
+    </div>
+    {% endif %}
+</section>

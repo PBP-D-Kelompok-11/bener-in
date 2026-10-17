@@ -7,7 +7,7 @@
 {% block content %}
 <main class="repair-page repair-page--detail">
     <div class="repair-shell">
-        <a class="repair-back-link" href="{% if viewer_is_customer %}{% url 'repair:list' %}{% else %}/{% endif %}"><span aria-hidden="true">←</span> {% if viewer_is_customer %}Permintaan Saya{% else %}Beranda{% endif %}</a>
+        <a class="repair-back-link" href="{% if viewer_is_customer %}{% url 'repair:list' %}{% else %}{% url 'repair:incoming' %}{% endif %}"><span aria-hidden="true">←</span> {% if viewer_is_customer %}Permintaan Saya{% else %}Ruang kerja mitra{% endif %}</a>
         {% include 'repair/_messages.html' %}
 
         <header class="repair-detail-hero repair-detail-hero--{{ repair.status }}">

@@ -302,6 +302,29 @@ class RepairCreationViewTests(TestCase):
         self.assertContains(response, 'Mitra aktif lainnya')
         self.assertFalse(response.context['form'].errors)
 
+    def test_category_selector_has_no_empty_card(self):
+        response = self.client.get(reverse('repair:create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'value="" name="category"')
+        self.assertEqual(
+            len(response.context['form'].fields['category'].choices),
+            len(KategoriBarang.choices),
+        )
+
+    def test_category_without_matching_service_explains_fallback(self):
+        token = self.client.get(reverse('repair:create')).context['token']
+        response = self.client.post(reverse('repair:create'), {
+            'submission_token': token,
+            'category': KategoriBarang.PERHIASAN,
+            'item_name': 'Cincin',
+            'description': 'Pengait lepas.',
+            'action': 'refresh_partners',
+        })
+        self.assertEqual(response.context['matching_partners'], [])
+        self.assertContains(response, 'Belum ada mitra yang mencantumkan layanan untuk kategori ini')
+        self.assertContains(response, 'value="Cincin"')
+        self.assertContains(response, 'data-partner-card')
+
     def test_valid_creation_and_owned_confirmation(self):
         response = self.client.post(reverse('repair:create'), self.payload(
             customer=str(self.other_customer.pk), status=RepairRequest.Status.COMPLETED,
@@ -449,12 +472,13 @@ class RepairManagementViewTests(TestCase):
             self.customer, backend='authentication.backends.CustomerBackend',
         )
 
-    def make_request(self, *, customer=None, mitra=None, item_name='Ponsel'):
+    def make_request(self, *, customer=None, mitra=None, item_name='Ponsel',
+                     category=KategoriBarang.GADGET, description='Layar retak.'):
         return RepairRequest.objects.create(
             customer=customer or self.customer,
             mitra=mitra or self.mitra,
-            category=KategoriBarang.GADGET,
-            item_name=item_name, description='Layar retak.',
+            category=category,
+            item_name=item_name, description=description,
         )
 
     def test_list_shows_only_owned_requests_and_recent_first(self):
@@ -487,11 +511,55 @@ class RepairManagementViewTests(TestCase):
         invalid = self.client.get(reverse('repair:list'), {'status': 'invented'})
         self.assertEqual(len(invalid.context['repairs']), 2)
 
+    def test_customer_list_search_category_and_combined_filters(self):
+        phone = self.make_request(item_name='Ponsel Retak', description='Baterai panas.')
+        bike = self.make_request(
+            item_name='Sepeda Kota', category=KategoriBarang.SEPEDA,
+            description='Rantai lepas.',
+        )
+        bike.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        hidden = self.make_request(customer=self.other_customer, item_name='Sepeda Rahasia')
+        search = self.client.get(reverse('repair:list'), {'q': 'baterai'})
+        self.assertEqual([item.pk for item in search.context['repairs']], [phone.pk])
+        partner_search = self.client.get(reverse('repair:list'), {'q': self.mitra.nama_usaha})
+        self.assertEqual(len(partner_search.context['repairs']), 2)
+        category = self.client.get(reverse('repair:list'), {'category': KategoriBarang.SEPEDA})
+        self.assertEqual([item.pk for item in category.context['repairs']], [bike.pk])
+        combined = self.client.get(reverse('repair:list'), {
+            'q': 'kota', 'category': KategoriBarang.SEPEDA, 'status': 'accepted',
+        })
+        self.assertEqual([item.pk for item in combined.context['repairs']], [bike.pk])
+        hidden_search = self.client.get(reverse('repair:list'), {'q': 'rahasia'})
+        self.assertEqual(hidden_search.context['result_count'], 0)
+        self.assertNotContains(hidden_search, hidden.item_name)
+
+    def test_customer_list_ajax_partial_and_regular_get_fallback(self):
+        self.make_request(item_name='Tablet')
+        url = reverse('repair:list')
+        partial = self.client.get(url, {'q': 'tablet'}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertTemplateUsed(partial, 'repair/_customer_results.html')
+        self.assertContains(partial, 'Tablet')
+        self.assertContains(partial, 'data-result-count="1"')
+        self.assertNotContains(partial, '<html')
+        regular = self.client.get(url, {'q': 'tablet', 'status': 'pending'})
+        self.assertTemplateUsed(regular, 'repair/request_list.html')
+        self.assertContains(regular, 'value="tablet"')
+        self.assertContains(regular, 'value="pending" selected')
+        self.assertContains(regular, 'data-customer-results')
+        self.assertContains(regular, 'aria-live="polite"')
+        self.assertContains(regular, 'js/repair.js')
+
     def test_list_anonymous_and_mitra_are_restricted(self):
         self.client.logout()
         self.assertEqual(self.client.get(reverse('repair:list')).status_code, 302)
+        self.assertEqual(self.client.get(
+            reverse('repair:list'), HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        ).status_code, 302)
         self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
         self.assertEqual(self.client.get(reverse('repair:list')).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('repair:list'), HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        ).status_code, 403)
 
     def test_detail_only_owner_or_assigned_mitra_can_view(self):
         repair = self.make_request()
@@ -672,3 +740,245 @@ class RepairManagementViewTests(TestCase):
             list(repair.status_history.values_list('to_status', flat=True)),
             [RepairRequest.Status.PENDING, RepairRequest.Status.ACCEPTED],
         )
+
+
+class MitraDashboardTests(TestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create_user(
+            username='dashboard-customer', password='test-password',
+            nama_lengkap='Pelanggan Daun', no_hp='0811',
+        )
+        self.mitra = MitraReparasi.objects.create_user(
+            username='dashboard-mitra', password='test-password',
+            nama_lengkap='Pemilik Bengkel', no_hp='0812',
+            nama_usaha='Bengkel Hijau', layanan=[KategoriBarang.GADGET],
+            alamat='Jakarta', latitude='-6.200000', longitude='106.816666',
+        )
+        self.other_mitra = MitraReparasi.objects.create_user(
+            username='other-dashboard-mitra', password='test-password',
+            nama_lengkap='Mitra Lain', no_hp='0813',
+            nama_usaha='Bengkel Lain', layanan=[KategoriBarang.SEPEDA],
+            alamat='Depok', latitude='-6.400000', longitude='106.800000',
+        )
+        self.client.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+
+    def make_request(self, *, mitra=None, category=KategoriBarang.GADGET,
+                     name='Ponsel', description='Layar retak.'):
+        return RepairRequest.objects.create(
+            customer=self.customer, mitra=mitra or self.mitra,
+            category=category, item_name=name, description=description,
+        )
+
+    def ajax_get(self, params=None):
+        return self.client.get(
+            reverse('repair:incoming'), params or {},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+    def ajax_post(self, repair, status, reason=''):
+        return self.client.post(
+            reverse('repair:mitra_transition', args=[repair.pk]),
+            {'expected_status': repair.status, 'to_status': status, 'reason': reason},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+    def test_dashboard_requires_mitra_and_shows_only_assigned_incoming(self):
+        own = self.make_request(name='Barang Saya')
+        other = self.make_request(mitra=self.other_mitra, name='Barang Mitra Lain')
+        response = self.client.get(reverse('repair:incoming'))
+        self.assertContains(response, own.item_name)
+        self.assertContains(response, self.customer.nama_lengkap)
+        self.assertNotContains(response, other.item_name)
+        self.assertEqual(response.context['counts']['incoming'], 1)
+        self.assertContains(response, 'name="group"')
+        detail = self.client.get(reverse('repair:detail', args=[own.pk]))
+        self.assertContains(detail, 'Ruang kerja mitra')
+        self.assertContains(detail, f'href="{reverse("repair:incoming")}"')
+        self.client.force_login(self.customer, backend='authentication.backends.CustomerBackend')
+        self.assertEqual(self.client.get(reverse('repair:incoming')).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse('repair:incoming')).status_code, 302)
+
+    def test_dashboard_groups_filters_search_and_empty_result(self):
+        pending = self.make_request(name='Ponsel Baru', description='Baterai panas')
+        active = self.make_request(category=KategoriBarang.SEPEDA, name='Sepeda Kota')
+        active.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        finished = self.make_request(name='Radio Lama')
+        finished.transition_to(RepairRequest.Status.REJECTED, self.mitra, reason='Komponen habis')
+        self.make_request(mitra=self.other_mitra, name='Rahasia')
+
+        active_response = self.client.get(reverse('repair:incoming'), {'group': 'active'})
+        self.assertContains(active_response, active.item_name)
+        self.assertNotContains(active_response, pending.item_name)
+        self.assertEqual(active_response.context['counts'], {'incoming': 1, 'active': 1, 'history': 1})
+        history = self.client.get(reverse('repair:incoming'), {'group': 'history', 'status': 'rejected'})
+        self.assertContains(history, finished.item_name)
+        self.assertNotContains(history, active.item_name)
+        combined = self.client.get(reverse('repair:incoming'), {
+            'group': 'active', 'category': KategoriBarang.SEPEDA,
+            'status': 'accepted', 'q': 'kota',
+        })
+        self.assertEqual([repair.pk for repair in combined.context['repairs']], [active.pk])
+        customer_search = self.client.get(reverse('repair:incoming'), {'q': 'pelanggan daun'})
+        self.assertEqual([repair.pk for repair in customer_search.context['repairs']], [pending.pk])
+        issue_search = self.client.get(reverse('repair:incoming'), {'q': 'baterai panas'})
+        self.assertEqual([repair.pk for repair in issue_search.context['repairs']], [pending.pk])
+        empty = self.client.get(reverse('repair:incoming'), {'q': 'tidak ada'})
+        self.assertContains(empty, 'Tidak ada hasil yang cocok')
+        self.assertEqual(empty.context['result_count'], 0)
+
+    def test_ajax_get_returns_only_results_partial_and_regular_get_keeps_filters(self):
+        self.make_request(name='Tablet')
+        partial = self.ajax_get({'group': 'incoming', 'q': 'tablet'})
+        self.assertEqual(partial.status_code, 200)
+        self.assertTemplateUsed(partial, 'repair/_mitra_results.html')
+        self.assertContains(partial, 'Tablet')
+        self.assertNotContains(partial, '<html')
+        self.assertContains(partial, 'data-result-count="1"')
+        regular = self.client.get(reverse('repair:incoming'), {'q': 'tablet'})
+        self.assertTemplateUsed(regular, 'repair/mitra_dashboard.html')
+        self.assertContains(regular, 'value="tablet"')
+
+    def test_valid_ajax_transitions_write_one_event_and_return_authoritative_results(self):
+        scenarios = [
+            ([], RepairRequest.Status.ACCEPTED, ''),
+            ([], RepairRequest.Status.REJECTED, 'Suku cadang tidak tersedia.'),
+            ([RepairRequest.Status.ACCEPTED], RepairRequest.Status.IN_PROGRESS, ''),
+            ([RepairRequest.Status.ACCEPTED], RepairRequest.Status.UNABLE_TO_REPAIR, 'Mesin rusak berat.'),
+            ([RepairRequest.Status.ACCEPTED, RepairRequest.Status.IN_PROGRESS], RepairRequest.Status.COMPLETED, ''),
+            ([RepairRequest.Status.ACCEPTED, RepairRequest.Status.IN_PROGRESS], RepairRequest.Status.UNABLE_TO_REPAIR, 'Tidak aman diperbaiki.'),
+        ]
+        for index, (before, target, reason) in enumerate(scenarios):
+            with self.subTest(target=target, before=before):
+                repair = self.make_request(name=f'Barang {index}')
+                for status in before:
+                    repair.transition_to(status, self.mitra)
+                count = repair.status_history.count()
+                response = self.ajax_post(repair, target, reason)
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()
+                self.assertTrue(payload['ok'])
+                self.assertEqual(payload['request']['status'], target)
+                self.assertEqual(payload['event']['reason'], reason)
+                self.assertEqual(payload['event']['actor'], self.mitra.nama_usaha)
+                self.assertIn('results_html', payload)
+                repair.refresh_from_db()
+                self.assertEqual(repair.status, target)
+                self.assertEqual(repair.status_history.count(), count + 1)
+                event = repair.status_history.order_by('-pk').first()
+                self.assertEqual(event.mitra_actor, self.mitra)
+                self.assertTrue(timezone.is_aware(event.occurred_at))
+                self.assertEqual(repair.is_successful, target == RepairRequest.Status.COMPLETED)
+
+    def test_ajax_action_refreshes_active_card_and_group_counts(self):
+        repair = self.make_request()
+        repair.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        response = self.client.post(
+            reverse('repair:mitra_transition', args=[repair.pk]) + '?group=active',
+            {'expected_status': RepairRequest.Status.ACCEPTED,
+             'to_status': RepairRequest.Status.IN_PROGRESS},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['counts'], {'incoming': 0, 'active': 1, 'history': 0})
+        self.assertIn('In Progress', payload['results_html'])
+        self.assertIn('Tandai selesai', payload['results_html'])
+        self.assertNotIn('Mulai reparasi', payload['results_html'])
+
+    def test_terminal_history_has_no_action_forms(self):
+        repair = self.make_request()
+        repair.transition_to(RepairRequest.Status.REJECTED, self.mitra, 'Tidak tersedia')
+        response = self.client.get(reverse('repair:incoming'), {'group': 'history'})
+        self.assertContains(response, repair.item_name)
+        self.assertNotContains(response, 'data-mitra-action')
+
+    def test_reason_is_required_for_rejection_and_unable_outcome(self):
+        pending = self.make_request()
+        rejected = self.ajax_post(pending, RepairRequest.Status.REJECTED, '   ')
+        self.assertEqual(rejected.status_code, 400)
+        self.assertIn('reason', rejected.json()['errors'])
+        self.assertEqual(pending.status_history.count(), 1)
+        pending.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
+        unable = self.ajax_post(pending, RepairRequest.Status.UNABLE_TO_REPAIR)
+        self.assertEqual(unable.status_code, 400)
+        self.assertEqual(pending.status_history.count(), 2)
+
+    def test_invalid_repeated_and_stale_actions_return_correct_codes(self):
+        repair = self.make_request()
+        invalid = self.ajax_post(repair, 'completed')
+        self.assertEqual(invalid.status_code, 400)
+        unknown = self.ajax_post(repair, 'imaginary')
+        self.assertEqual(unknown.status_code, 400)
+        self.assertEqual(self.ajax_post(repair, RepairRequest.Status.ACCEPTED).status_code, 200)
+        repeated = self.ajax_post(repair, RepairRequest.Status.ACCEPTED)
+        self.assertEqual(repeated.status_code, 409)
+        self.assertFalse(repeated.json()['ok'])
+        self.assertEqual(repair.status_history.count(), 2)
+
+    def test_competing_change_is_reported_as_conflict(self):
+        repair = self.make_request()
+        original_transition = RepairRequest.transition_to
+
+        def reject_then_accept(instance, status, actor, reason=''):
+            current = RepairRequest.objects.get(pk=repair.pk)
+            original_transition(current, RepairRequest.Status.REJECTED, self.mitra, 'Tidak tersedia')
+            return original_transition(instance, status, actor, reason=reason)
+
+        with patch.object(RepairRequest, 'transition_to', new=reject_then_accept):
+            response = self.ajax_post(repair, RepairRequest.Status.ACCEPTED)
+        self.assertEqual(response.status_code, 409)
+        repair.refresh_from_db()
+        self.assertEqual(repair.status, RepairRequest.Status.REJECTED)
+        self.assertEqual(repair.status_history.count(), 2)
+
+    def test_unassigned_mitra_and_customer_cannot_transition(self):
+        repair = self.make_request()
+        self.client.force_login(self.other_mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(self.ajax_post(repair, RepairRequest.Status.ACCEPTED).status_code, 404)
+        self.client.force_login(self.customer, backend='authentication.backends.CustomerBackend')
+        self.assertEqual(self.ajax_post(repair, RepairRequest.Status.ACCEPTED).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.ajax_post(repair, RepairRequest.Status.ACCEPTED).status_code, 302)
+        self.assertEqual(repair.status_history.count(), 1)
+
+    def test_standard_post_redirects_and_customer_sees_reason(self):
+        repair = self.make_request()
+        response = self.client.post(
+            reverse('repair:mitra_transition', args=[repair.pk]),
+            {'expected_status': RepairRequest.Status.PENDING,
+             'to_status': RepairRequest.Status.REJECTED, 'reason': 'Tidak ada suku cadang.'},
+        )
+        self.assertRedirects(response, reverse('repair:incoming'))
+        self.client.force_login(self.customer, backend='authentication.backends.CustomerBackend')
+        detail = self.client.get(reverse('repair:detail', args=[repair.pk]))
+        self.assertContains(detail, 'Tidak ada suku cadang.')
+        self.assertContains(detail, 'Bengkel Hijau')
+
+    def test_standard_post_invalid_reason_redirects_without_mutation(self):
+        repair = self.make_request()
+        response = self.client.post(
+            reverse('repair:mitra_transition', args=[repair.pk]),
+            {'expected_status': RepairRequest.Status.PENDING,
+             'to_status': RepairRequest.Status.REJECTED, 'reason': ''},
+        )
+        self.assertRedirects(response, reverse('repair:incoming'))
+        repair.refresh_from_db()
+        self.assertEqual(repair.status, RepairRequest.Status.PENDING)
+        self.assertEqual(repair.status_history.count(), 1)
+
+    def test_transition_requires_post_and_csrf(self):
+        repair = self.make_request()
+        url = reverse('repair:mitra_transition', args=[repair.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        protected = Client(enforce_csrf_checks=True)
+        protected.force_login(self.mitra, backend='authentication.backends.MitraBackend')
+        self.assertEqual(protected.post(url, {'to_status': 'accepted'}).status_code, 403)
+        protected.get(reverse('repair:incoming'))
+        token = protected.cookies['csrftoken'].value
+        valid = protected.post(
+            url, {'expected_status': RepairRequest.Status.PENDING, 'to_status': 'accepted'},
+            HTTP_X_CSRFTOKEN=token, HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(valid.status_code, 200)
+        self.assertEqual(repair.status_history.count(), 2)

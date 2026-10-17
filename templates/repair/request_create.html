@@ -77,6 +77,7 @@
                                 {% for partner in matching_partners %}{% include 'repair/_mitra_card.html' %}{% endfor %}
                             </div>
                         </div>
+                        <p class="repair-empty repair-partner-empty" data-matching-empty {% if matching_partners or not summary.category %}hidden{% endif %}>Belum ada mitra yang mencantumkan layanan untuk kategori ini. Kamu tetap dapat memilih mitra aktif lainnya di bawah.</p>
                         <div class="repair-partner-section" data-other-section {% if not other_partners %}hidden{% endif %}>
                             <h3 data-other-heading>{% if summary.category %}Mitra aktif lainnya{% else %}Mitra terdaftar{% endif %}</h3>
                             <p class="repair-hint" data-other-hint {% if not summary.category %}hidden{% endif %}>Layanan yang tercantum belum cocok dengan kategori ini. Pastikan mitra dapat menangani barangmu sebelum mengirim.</p>
