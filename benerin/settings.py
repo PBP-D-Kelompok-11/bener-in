@@ -30,9 +30,12 @@ SECRET_KEY = 'django-insecure-dd69=^r=kt!hs)f_2o4k-#f@cam1mw&1ksxfr^dk(sodnb_v*v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "hisyam-prasetyo-benerin.pws.cs.ui.ac.id"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "hisyam-prasetyo-benerin.pws.cs.ui.ac.id", "muhammad-akmal53-benerin.pws.cs.ui.ac.id"]
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
-
+CSRF_TRUSTED_ORIGINS = [
+    'https://muhammad-akmal53-benerin.pws.cs.ui.ac.id',
+    
+]
 
 # Application definition
 
@@ -47,6 +50,7 @@ INSTALLED_APPS = [
     'authentication',
     'reviews', 
     'mitra',
+    'repair',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,14 @@
+<label class="repair-partner-card" data-partner-card data-categories="{{ partner.service_keys|join:',' }}">
+    <input type="radio" name="mitra" value="{{ partner.pk }}" class="repair-radio" required
+           {% if partner.selected %}checked{% endif %}>
+    <span class="repair-partner-card__body">
+        <span class="repair-partner-card__top">
+            <strong>{{ partner.name }}</strong>
+            <span class="repair-partner-card__mark" aria-hidden="true">✓</span>
+        </span>
+        <span class="repair-partner-card__address">{{ partner.address|default:"Alamat belum dicantumkan" }}</span>
+        <span class="repair-partner-card__services">
+            {% if partner.services %}Layanan: {{ partner.services|join:", " }}{% else %}Layanan belum dicantumkan{% endif %}
+        </span>
+    </span>
+</label>

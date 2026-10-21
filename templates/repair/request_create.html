@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Ajukan reparasi | bener.in</title>{% endblock meta %}
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/repair.css' %}">
+<script src="{% static 'js/repair.js' %}" defer></script>
+{% endblock css %}
+
+{% block content %}
+<main class="repair-page">
+    <div class="repair-shell">
+        <header class="repair-intro">
+            <p class="repair-eyebrow">Permintaan reparasi</p>
+            <h1>Beri barangmu kesempatan kedua.</h1>
+            <p>Pilih kategori, temukan mitra terdaftar, lalu ceritakan apa yang perlu diperbaiki.</p>
+        </header>
+
+        <div class="repair-layout">
+            <form method="post" action="{% url 'repair:create' %}" class="repair-form" data-repair-wizard data-start-step="{{ first_error_step }}">
+                {% csrf_token %}
+                <input type="hidden" name="submission_token" value="{{ token }}">
+                <input type="hidden" name="displayed_category" value="{{ displayed_category }}">
+
+                <nav class="repair-progress" aria-label="Tahapan permintaan reparasi">
+                    <ol>
+                        <li data-progress-step><span class="repair-progress__number">1</span><span>Kategori</span></li>
+                        <li data-progress-step><span class="repair-progress__number">2</span><span>Mitra</span></li>
+                        <li data-progress-step><span class="repair-progress__number">3</span><span>Detail</span></li>
+                        <li data-progress-step><span class="repair-progress__number">4</span><span>Tinjau</span></li>
+                    </ol>
+                </nav>
+
+                {% if form.non_field_errors %}
+                <div class="repair-form-alert" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <section class="repair-step" data-step="0" aria-labelledby="repair-step-category">
+                    <div class="repair-step__heading">
+                        <p class="repair-step__count">Langkah 1 dari 4</p>
+                        <h2 id="repair-step-category" tabindex="-1">Barang apa yang ingin diperbaiki?</h2>
+                        <p>Kategori membantu kami menampilkan mitra dengan layanan yang relevan lebih dahulu.</p>
+                    </div>
+                    <fieldset class="repair-fieldset" aria-describedby="repair-category-hint repair-category-error">
+                        <legend class="repair-sr-only">{{ form.category.label }}</legend>
+                        <p id="repair-category-hint" class="repair-hint">Pilih satu kategori yang paling sesuai.</p>
+                        <div class="repair-category-grid">
+                            {% for option in form.category %}
+                            <label class="repair-choice-card">
+                                {{ option.tag }}
+                                <span class="repair-choice-card__body">{{ option.choice_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <div id="repair-category-error" class="repair-error" aria-live="polite">{{ form.category.errors }}</div>
+                        <p class="repair-client-error" data-error-for="category" role="alert" hidden></p>
+                    </fieldset>
+                    <div class="repair-actions">
+                        <button class="repair-button repair-button--quiet repair-nojs-only" type="submit" name="action" value="refresh_partners" formnovalidate>Perbarui urutan mitra</button>
+                        <button class="repair-button repair-button--primary repair-js-only" type="button" data-next>Lanjut: pilih mitra <span aria-hidden="true">→</span></button>
+                    </div>
+                </section>
+
+                <section class="repair-step" data-step="1" aria-labelledby="repair-step-mitra">
+                    <div class="repair-step__heading">
+                        <p class="repair-step__count">Langkah 2 dari 4</p>
+                        <h2 id="repair-step-mitra" tabindex="-1">Pilih mitra reparasi</h2>
+                        <p>Semua pilihan di bawah adalah akun mitra aktif yang terdaftar di bener.in. Layanan yang cocok ditampilkan lebih dulu.</p>
+                    </div>
+                    <fieldset class="repair-fieldset" aria-describedby="repair-mitra-hint repair-mitra-error">
+                        <legend class="repair-sr-only">Pilih satu mitra reparasi</legend>
+                        <p id="repair-mitra-hint" class="repair-hint">Mitra yang dipilih tidak dapat diganti setelah permintaan dikirim.</p>
+                        {% if has_partners %}
+                        <div class="repair-partner-section" data-matching-section {% if not matching_partners %}hidden{% endif %}>
+                            <h3>Sesuai kategori pilihanmu</h3>
+                            <div class="repair-partner-grid" data-matching-list>
+                                {% for partner in matching_partners %}{% include 'repair/_mitra_card.html' %}{% endfor %}
+                            </div>
+                        </div>
+                        <p class="repair-empty repair-partner-empty" data-matching-empty {% if matching_partners or not summary.category %}hidden{% endif %}>Belum ada mitra yang mencantumkan layanan untuk kategori ini. Kamu tetap dapat memilih mitra aktif lainnya di bawah.</p>
+                        <div class="repair-partner-section" data-other-section {% if not other_partners %}hidden{% endif %}>
+                            <h3 data-other-heading>{% if summary.category %}Mitra aktif lainnya{% else %}Mitra terdaftar{% endif %}</h3>
+                            <p class="repair-hint" data-other-hint {% if not summary.category %}hidden{% endif %}>Layanan yang tercantum belum cocok dengan kategori ini. Pastikan mitra dapat menangani barangmu sebelum mengirim.</p>
+                            <div class="repair-partner-grid" data-other-list>
+                                {% for partner in other_partners %}{% include 'repair/_mitra_card.html' %}{% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="repair-empty">Belum ada mitra aktif. Coba kembali saat mitra reparasi tersedia.</div>
+                        {% endif %}
+                        <div id="repair-mitra-error" class="repair-error" aria-live="polite">{{ form.mitra.errors }}</div>
+                        <p class="repair-client-error" data-error-for="mitra" role="alert" hidden></p>
+                    </fieldset>
+                    <div class="repair-actions">
+                        <button class="repair-button repair-button--quiet repair-js-only" type="button" data-back>Kembali</button>
+                        <button class="repair-button repair-button--primary repair-js-only" type="button" data-next>Lanjut: isi detail <span aria-hidden="true">→</span></button>
+                    </div>
+                </section>
+
+                <section class="repair-step" data-step="2" aria-labelledby="repair-step-details">
+                    <div class="repair-step__heading">
+                        <p class="repair-step__count">Langkah 3 dari 4</p>
+                        <h2 id="repair-step-details" tabindex="-1">Ceritakan kondisi barangmu</h2>
+                        <p>Detail yang jelas membantu mitra memahami masalah sebelum memutuskan langkah berikutnya.</p>
+                    </div>
+                    <div class="repair-fields">
+                        <div class="repair-field">
+                            <label for="{{ form.item_name.id_for_label }}">{{ form.item_name.label }}</label>
+                            <p id="repair-item-hint" class="repair-hint">Sebutkan jenis atau model barang jika kamu mengetahuinya.</p>
+                            {{ form.item_name }}
+                            <div id="repair-item-error" class="repair-error" aria-live="polite">{{ form.item_name.errors }}</div>
+                            <p class="repair-client-error" data-error-for="item_name" role="alert" hidden></p>
+                        </div>
+                        <div class="repair-field">
+                            <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                            <p id="repair-description-hint" class="repair-hint">Apa gejalanya? Kapan mulai terjadi? Apa yang sudah kamu coba?</p>
+                            {{ form.description }}
+                            <div id="repair-description-error" class="repair-error" aria-live="polite">{{ form.description.errors }}</div>
+                            <p class="repair-client-error" data-error-for="description" role="alert" hidden></p>
+                        </div>
+                    </div>
+                    <div class="repair-actions">
+                        <button class="repair-button repair-button--quiet repair-js-only" type="button" data-back>Kembali</button>
+                        <button class="repair-button repair-button--primary repair-js-only" type="button" data-next>Lanjut: tinjau <span aria-hidden="true">→</span></button>
+                    </div>
+                </section>
+
+                <section class="repair-step" data-step="3" aria-labelledby="repair-step-review">
+                    <div class="repair-step__heading">
+                        <p class="repair-step__count">Langkah 4 dari 4</p>
+                        <h2 id="repair-step-review" tabindex="-1">Tinjau sebelum mengirim</h2>
+                        <p>Periksa kembali barang dan penerima permintaanmu. Kategori serta mitra tidak dapat diubah setelah dikirim.</p>
+                    </div>
+                    <p class="repair-hint repair-nojs-only">Tanpa JavaScript, pilih “Tinjau ringkasan” setelah mengisi formulir. Jika ada perubahan, tinjau kembali sebelum mengirim.</p>
+                    <button class="repair-button repair-button--quiet repair-nojs-only" type="submit" name="action" value="preview" formnovalidate>Tinjau ringkasan</button>
+                    <dl class="repair-summary" data-review-summary>
+                        <div><dt>Kategori</dt><dd data-summary-category>{{ summary.category|default:'Belum dipilih' }}</dd></div>
+                        <div><dt>Mitra penerima</dt><dd data-summary-mitra>{{ summary.mitra|default:'Belum dipilih' }}</dd></div>
+                        <div><dt>Nama barang</dt><dd data-summary-item>{{ summary.item_name|default:'Belum diisi' }}</dd></div>
+                        <div><dt>Masalah</dt><dd data-summary-description>{{ summary.description|default:'Belum diisi' }}</dd></div>
+                    </dl>
+                    {% if preview %}<p class="repair-preview-note" role="status">Ringkasan siap. Jika semua sudah benar, kirim permintaanmu.</p>{% endif %}
+                    <div class="repair-actions">
+                        <button class="repair-button repair-button--quiet repair-js-only" type="button" data-back>Ubah detail</button>
+                        <button class="repair-button repair-button--primary" type="submit" name="action" value="submit" data-submit>Kirim permintaan</button>
+                    </div>
+                </section>
+            </form>
+
+            <aside class="repair-aside" aria-label="Tentang permintaan reparasi">
+                <div class="repair-aside__card">
+                    <span class="repair-aside__symbol" aria-hidden="true">↻</span>
+                    <h2>Perbaiki dulu, gunakan lebih lama.</h2>
+                    <p>Setiap barang punya cerita. Membagikan kondisi barang dengan jelas membantu mitra menilai permintaanmu.</p>
+                    <ul>
+                        <li>Pilih mitra yang paling sesuai.</li>
+                        <li>Lihat status awal setelah permintaan dikirim.</li>
+                        <li>Simpan riwayat reparasi barangmu.</li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+</main>
+{% endblock content %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Batalkan permintaan #{{ repair.pk }} | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--form">
+    <div class="repair-shell repair-shell--narrow">
+        <a class="repair-back-link" href="{% url 'repair:detail' repair.pk %}"><span aria-hidden="true">←</span> Detail permintaan</a>
+        <div class="repair-management-card repair-management-card--warning">
+            <p class="repair-eyebrow">Permintaan #{{ repair.pk }}</p>
+            <h1>Batalkan permintaan ini?</h1>
+            <p class="repair-management-card__lead">Permintaan untuk <strong>{{ repair.item_name }}</strong> kepada <strong>{{ repair.mitra.nama_usaha }}</strong> akan berubah menjadi Cancelled. Riwayatnya tetap tersimpan dan tidak dapat diaktifkan kembali.</p>
+            <p>Jika ingin memilih mitra lain, batalkan permintaan ini lalu buat permintaan baru.</p>
+            <form method="post" action="{% url 'repair:cancel' repair.pk %}">
+                {% csrf_token %}
+                <div class="repair-actions">
+                    <a class="repair-button repair-button--quiet" href="{% url 'repair:detail' repair.pk %}">Kembali, jangan batalkan</a>
+                    <button class="repair-button repair-button--danger" type="submit">Ya, batalkan permintaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock content %}

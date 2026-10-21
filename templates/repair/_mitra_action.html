@@ -1,0 +1,27 @@
+{% if reason_required %}
+<details class="repair-work-action repair-work-action--reason">
+    <summary class="repair-button repair-button--quiet">{{ label }}</summary>
+    <form method="post" action="{% url 'repair:mitra_transition' repair.pk %}{% if filter_query %}?{{ filter_query }}{% endif %}" data-mitra-action>
+        {% csrf_token %}
+        <input type="hidden" name="expected_status" value="{{ repair.status }}">
+        <input type="hidden" name="to_status" value="{{ target }}">
+        <label for="reason-{{ repair.pk }}-{{ target }}">Alasan <span aria-hidden="true">*</span></label>
+        <textarea id="reason-{{ repair.pk }}-{{ target }}" name="reason" rows="3" required placeholder="Jelaskan keputusan ini kepada pelanggan."></textarea>
+        <p class="repair-hint">Alasan akan terlihat oleh pelanggan di riwayat status.</p>
+        <p class="repair-action-feedback" role="alert" hidden data-action-feedback></p>
+        <button class="repair-button repair-button--danger" type="submit">Konfirmasi {{ label|lower }}</button>
+    </form>
+</details>
+{% else %}
+<details class="repair-work-action repair-work-action--confirm">
+    <summary class="repair-button repair-button--primary">{{ label }}</summary>
+    <form method="post" action="{% url 'repair:mitra_transition' repair.pk %}{% if filter_query %}?{{ filter_query }}{% endif %}" data-mitra-action>
+        {% csrf_token %}
+        <input type="hidden" name="expected_status" value="{{ repair.status }}">
+        <input type="hidden" name="to_status" value="{{ target }}">
+        <p>Konfirmasi perubahan status untuk {{ repair.item_name }}.</p>
+        <p class="repair-action-feedback" role="alert" hidden data-action-feedback></p>
+        <button class="repair-button repair-button--primary" type="submit">Ya, {{ label|lower }}</button>
+    </form>
+</details>
+{% endif %}

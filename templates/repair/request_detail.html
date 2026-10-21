@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>{{ repair.item_name }} | Permintaan Reparasi | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--detail">
+    <div class="repair-shell">
+        <a class="repair-back-link" href="{% if viewer_is_customer %}{% url 'repair:list' %}{% else %}{% url 'repair:incoming' %}{% endif %}"><span aria-hidden="true">←</span> {% if viewer_is_customer %}Permintaan Saya{% else %}Ruang kerja mitra{% endif %}</a>
+        {% include 'repair/_messages.html' %}
+
+        <header class="repair-detail-hero repair-detail-hero--{{ repair.status }}">
+            <div class="repair-detail-hero__top">
+                <p class="repair-eyebrow">Permintaan #{{ repair.pk }}</p>
+                {% include 'repair/_status_badge.html' with status=repair.status label=repair.get_status_display %}
+            </div>
+            <h1>{{ repair.item_name }}</h1>
+            <p>{{ status_guidance }}</p>
+            {% if latest_event.reason %}
+            <div class="repair-outcome-reason"><strong>Alasan mitra:</strong> {{ latest_event.reason }}</div>
+            {% endif %}
+            {% if can_manage %}
+            <div class="repair-actions repair-actions--start">
+                <a class="repair-button repair-button--quiet" href="{% url 'repair:edit' repair.pk %}">Edit detail</a>
+                <a class="repair-button repair-button--danger" href="{% url 'repair:cancel' repair.pk %}">Batalkan permintaan</a>
+            </div>
+            {% endif %}
+        </header>
+
+        <div class="repair-detail-grid">
+            <section class="repair-detail-panel" aria-labelledby="repair-detail-info">
+                <h2 id="repair-detail-info">Detail permintaan</h2>
+                <dl class="repair-summary">
+                    <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
+                    <div><dt>Mitra penerima</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
+                    {% if not viewer_is_customer %}<div><dt>Diajukan oleh</dt><dd>{{ repair.customer.nama_lengkap }}</dd></div>{% endif %}
+                    <div><dt>Diajukan pada</dt><dd><time datetime="{{ repair.created_at|date:'c' }}">{{ repair.created_at|date:'d M Y, H:i' }} UTC</time></dd></div>
+                </dl>
+                <div class="repair-description">
+                    <h3>Masalah yang dilaporkan</h3>
+                    <p>{{ repair.description }}</p>
+                </div>
+            </section>
+
+            <section class="repair-detail-panel" aria-labelledby="repair-detail-history">
+                <div class="repair-detail-panel__heading">
+                    <h2 id="repair-detail-history">Riwayat status</h2>
+                    <p>Hanya perubahan yang benar-benar tercatat yang ditampilkan.</p>
+                </div>
+                {% if history %}
+                <ol class="repair-timeline">
+                    {% for event in history %}
+                    <li class="repair-timeline__event">
+                        <span class="repair-timeline__dot" aria-hidden="true"></span>
+                        <div class="repair-timeline__content">
+                            {% include 'repair/_status_badge.html' with status=event.to_status label=event.get_to_status_display %}
+                            <p class="repair-timeline__meta"><time datetime="{{ event.occurred_at|date:'c' }}">{{ event.occurred_at|date:'d M Y, H:i' }} UTC</time> · {{ event.actor_label }}</p>
+                            {% if event.reason %}<p class="repair-timeline__reason"><strong>Alasan:</strong> {{ event.reason }}</p>{% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="repair-history-empty">Belum ada perubahan status yang tercatat.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock content %}

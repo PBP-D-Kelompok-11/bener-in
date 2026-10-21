@@ -1,19 +1,20 @@
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
+
+from authentication.models import Customer
+from repair.models import RepairRequest
 
 from .impact import get_impact_summary
 
 
 @login_required(login_url='authentication:login')
 def impact_dashboard(request):
-    # TODO: ganti dengan jumlah RepairRequest berstatus Completed milik user
-    # setelah model Modul B (Akmal) tersedia.
-    saved_count = 0
-
-    # Hanya untuk tes tampilan saat DEBUG: /reviews/impact/?demo=7
-    if settings.DEBUG and request.GET.get('demo', '').isdigit():
-        saved_count = int(request.GET['demo'])
+    if not isinstance(request.user, Customer) or request.user.role != 'customer' or not request.user.is_active:
+        return HttpResponseForbidden('Hanya akun Customer yang dapat melihat Impact Tracker.')
+    saved_count = RepairRequest.objects.filter(
+        customer=request.user, status=RepairRequest.Status.COMPLETED,
+    ).count()
 
     return render(request, 'reviews/impact_dashboard.html', {
         'summary': get_impact_summary(saved_count),

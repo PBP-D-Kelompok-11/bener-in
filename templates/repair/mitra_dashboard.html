@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Ruang Kerja Mitra | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--mitra" data-mitra-dashboard>
+    <div class="repair-shell">
+        {% include 'repair/_messages.html' %}
+        <header class="repair-page-heading">
+            <div>
+                <p class="repair-eyebrow">Ruang kerja mitra</p>
+                <h1>Kelola reparasi</h1>
+                <p>Tanggapi permintaan baru, lanjutkan pekerjaan aktif, dan lihat riwayat reparasi.</p>
+            </div>
+        </header>
+
+        <form class="repair-mitra-filters" method="get" action="{% url 'repair:incoming' %}" data-mitra-filters role="search">
+            <fieldset class="repair-mitra-groups">
+                <legend class="repair-sr-only">Kelompok permintaan</legend>
+                <label class="repair-mitra-group">
+                    <input type="radio" name="group" value="incoming" {% if group == 'incoming' %}checked{% endif %}>
+                    <span>Permintaan masuk <strong data-count="incoming">{{ counts.incoming }}</strong></span>
+                </label>
+                <label class="repair-mitra-group">
+                    <input type="radio" name="group" value="active" {% if group == 'active' %}checked{% endif %}>
+                    <span>Reparasi aktif <strong data-count="active">{{ counts.active }}</strong></span>
+                </label>
+                <label class="repair-mitra-group">
+                    <input type="radio" name="group" value="history" {% if group == 'history' %}checked{% endif %}>
+                    <span>Riwayat <strong data-count="history">{{ counts.history }}</strong></span>
+                </label>
+            </fieldset>
+
+            <div class="repair-mitra-filter-row">
+                <div class="repair-mitra-filter-field repair-mitra-filter-field--search">
+                    <label for="mitra-search">Cari permintaan</label>
+                    <input id="mitra-search" type="search" name="q" value="{{ search_query }}" placeholder="Barang atau pelanggan" autocomplete="off">
+                </div>
+                <div class="repair-mitra-filter-field">
+                    <label for="mitra-category">Kategori</label>
+                    <select id="mitra-category" name="category">
+                        <option value="">Semua kategori</option>
+                        {% for value, label in category_choices %}<option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="repair-mitra-filter-field">
+                    <label for="mitra-status">Status</label>
+                    <select id="mitra-status" name="status">
+                        <option value="">Semua status</option>
+                        {% for value, label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="repair-mitra-filter-actions">
+                    <button class="repair-button repair-button--primary" type="submit">Terapkan</button>
+                    <a class="repair-button repair-button--quiet" href="{% url 'repair:incoming' %}" data-mitra-reset>Reset</a>
+                </div>
+            </div>
+        </form>
+
+        <p class="repair-mitra-live repair-sr-only" role="status" aria-live="polite" data-mitra-live></p>
+        <div class="repair-mitra-notice" role="status" hidden data-mitra-notice></div>
+        <div data-mitra-results aria-busy="false">
+            {% include 'repair/_mitra_results.html' %}
+        </div>
+    </div>
+</main>
+<script src="{% static 'js/repair.js' %}" defer></script>
+{% endblock content %}
