@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navigation.css' %}">
+    <script src="{% static 'js/navigation.js' %}" defer></script>
 
     {% block css %}
 
@@ -18,30 +20,45 @@
     {% endblock meta %}
 </head>
 
-<body>
-  <header class="site-header">
-    <div class="container">
-        <nav>
-            <a href="/" class="btn btn-home">♻️ bener.in</a>
-            <div class="nav-right">
+<body class="{% block body_class %}{% endblock body_class %}">
+  <header class="site-header bener-header">
+    <div class="container bener-nav-container">
+        <nav class="bener-nav" aria-label="Navigasi utama" data-navigation>
+            <a href="{% url 'landing_page' %}" class="bener-nav-brand" aria-label="bener.in — Beranda">
+                <svg viewBox="0 0 32 32" aria-hidden="true" fill="none"><path d="M25 5C11 4 5 11 8 20c9 4 18-2 17-15Z" fill="currentColor"/><path d="m6 27 14-15" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="m13 19 7-7" stroke="var(--paper)" stroke-width="2" stroke-linecap="round"/></svg>
+                <span>bener<span class="bener-nav-brand-dot">.</span>in</span>
+            </a>
+            <button class="bener-nav-toggle" type="button" aria-expanded="false" aria-controls="bener-site-menu" aria-label="Buka menu navigasi" data-nav-toggle hidden>
+                <span></span><span></span><span></span>
+            </button>
+            <div class="bener-nav-panel" id="bener-site-menu" data-nav-panel>
+              <div class="bener-nav-links">
                 {% if user.is_authenticated %}
                     {% if user.role == 'customer' %}
-                        <a href="/#cari-mitra" class="btn btn-ghost">Cari Mitra</a>
-                        <a href="/repair/" class="btn btn-ghost">Permintaan Saya</a>
-                        <a href="{% url 'reviews:impact' %}" class="btn btn-ghost">Impact</a>
+                        <a href="{% url 'landing_page' %}#cari-mitra">Cari Mitra</a>
+                        <a href="/repair/">Permintaan Saya</a>
+                        <a href="{% url 'reviews:impact' %}">Impact</a>
                     {% elif user.role == 'mitra' %}
-                        <a href="/repair/incoming/" class="btn btn-ghost">Permintaan Masuk</a>
-                        <a href="/mitra/profile/" class="btn btn-ghost">Profil Mitra</a>
+                        <a href="/repair/incoming/">Permintaan Masuk</a>
+                        <a href="/mitra/profile/">Profil Mitra</a>
                     {% endif %}
+                {% else %}
+                    <a href="{% url 'landing_page' %}#cari-mitra">Cari reparasi</a>
+                    <a href="{% url 'landing_page' %}#cara-kerja">Cara kerja</a>
+                    <a href="{% url 'landing_page' %}#faq">FAQ</a>
+                {% endif %}
+              </div>
+              <div class="bener-nav-account">
+                {% if user.is_authenticated %}
                     <form method="post" action="{% url 'authentication:logout' %}" class="logout-form">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-outline">Logout</button>
+                        <button type="submit" class="bener-nav-action bener-nav-secondary">Logout</button>
                     </form>
                 {% else %}
-                    <a href="/#cari-mitra" class="btn btn-ghost">Cari Mitra</a>
-                    <a href="{% url 'authentication:login' %}" class="btn btn-outline">Login</a>
-                    <a href="{% url 'authentication:register' %}" class="btn btn-solid">Register</a>
+                    <a href="{% url 'authentication:login' %}" class="bener-nav-action bener-nav-secondary">Masuk</a>
+                    <a href="{% url 'authentication:register' %}" class="bener-nav-action bener-nav-primary">Daftar</a>
                 {% endif %}
+              </div>
             </div>
         </nav>
     </div>

@@ -11,6 +11,8 @@
 <meta name="description" content="Temukan informasi tempat reparasi di sekitarmu. Bersama bener.in, beri barang kesayangan kesempatan untuk dipakai lebih lama.">
 {% endblock meta %}
 
+{% block body_class %}home-landing{% endblock body_class %}
+
 {% block content %}
 <a class="home-skip" href="#cari-mitra">Langsung ke pencarian reparasi</a>
 <main class="home-page" id="home">
@@ -24,53 +26,24 @@
     <symbol id="home-tool" viewBox="0 0 48 48"><path d="M29 7a11 11 0 0 0-9 17L7 37a3 3 0 0 0 4 4l13-13a11 11 0 0 0 17-9l-8 5-8-8 5-9z"/></symbol>
   </svg>
 
-  <section class="home-hero home-shell" aria-labelledby="home-title">
-    <div class="home-hero-copy">
+  <section class="home-hero" aria-labelledby="home-title">
+    <span class="home-hero-cloud home-hero-cloud-left" aria-hidden="true"></span>
+    <span class="home-hero-cloud home-hero-cloud-right" aria-hidden="true"></span>
+    <div class="home-hero-copy home-shell">
       <p class="home-eyebrow"><span class="home-dot"></span> Pakai lebih lama. Cerita lebih panjang.</p>
-      <h1 id="home-title">Barang rusak<br>belum tentu<br><span>selesai.</span></h1>
-      <p class="home-lead">Temukan tempat reparasi untuk barang yang masih berarti. Bener.in membantumu menjelajahi pilihan perbaikan, supaya tak buru-buru beli lagi.</p>
+      <h1 id="home-title">Barang rusak<br>belum tentu <span>selesai.</span></h1>
+      <p class="home-lead">Barang kesayanganmu mungkin masih punya banyak cerita. Temukan pilihan reparasi di sekitarmu, perpanjang masa pakainya, dan mulai kebiasaan yang lebih baik untuk bumi.</p>
       <div class="home-actions">
         <a href="#cari-mitra" class="home-button home-button-primary">Cari tempat reparasi <svg aria-hidden="true"><use href="#home-arrow"/></svg></a>
-        <a href="#cara-kerja" class="home-text-link">Lihat cara kerjanya <span aria-hidden="true">↘</span></a>
+        <a href="#cara-kerja" class="home-button home-button-outline">Lihat cara kerjanya <span aria-hidden="true">↘</span></a>
       </div>
       <p class="home-hero-note">Mulai dari barangmu. Mulai dari sekitarmu.</p>
     </div>
-    <figure class="home-workbench">
-      <div class="home-art-label"><span class="home-dot"></span> Bukan akhir cerita.</div>
-      <svg class="home-lamp-art" viewBox="0 0 560 560" role="img" aria-labelledby="home-art-title home-art-desc">
-        <title id="home-art-title">Kesempatan kedua untuk lampu kesayangan</title>
-        <desc id="home-art-desc">Ilustrasi orisinal lampu meja hijau, obeng, dan baut di atas meja kerja reparasi.</desc>
-        <circle cx="280" cy="263" r="204" fill="var(--paper)"/>
-        <g stroke="var(--ink)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M52 443h456M76 455h408" opacity=".35"/>
-          <path d="M360 398c60 0 86 2 86-43v-24c0-18 28-18 28 0v59c0 22 14 31 29 31"/>
-          <path d="M503 413v16m-5-13h10"/>
-          <path d="m245 376 67-149 14 8-64 146" fill="var(--leaf)"/>
-          <path d="M254 235 325 327l-12 10-72-92" fill="var(--paper)"/>
-          <path d="m320 329 44-135 15 5-44 136" fill="var(--leaf)"/>
-          <circle cx="324" cy="332" r="17" fill="var(--ink)"/><circle cx="324" cy="332" r="6" fill="var(--lime)"/>
-          <circle cx="249" cy="239" r="13" fill="var(--ink)"/><circle cx="249" cy="239" r="4" fill="var(--lime)"/>
-          <path d="m362 189 10-31 17 6-10 31" fill="var(--ink)"/>
-          <path d="M252 113c29-28 63-25 87-11l58 63-122 78-30-72c-9-23-9-42 7-58Z" fill="var(--leaf)"/>
-          <path d="M260 121c11-10 25-15 38-14" stroke="var(--paper)" stroke-width="5"/>
-          <ellipse cx="337" cy="205" rx="73" ry="22" transform="rotate(-33 337 205)" fill="var(--ink)"/>
-          <ellipse cx="337" cy="205" rx="58" ry="12" transform="rotate(-33 337 205)" fill="var(--lime)" stroke="none"/>
-          <path d="m347 225 35 13m-60-2 8 29m37-52 27-7" stroke="var(--rust)" stroke-width="4"/>
-          <path d="M206 395c0-12 21-22 47-22s48 10 48 22v16h-95Z" fill="var(--leaf)"/>
-          <ellipse cx="253" cy="395" rx="47" ry="17" fill="var(--leaf)"/>
-          <path d="M189 414c0-11 29-20 64-20s64 9 64 20v12H189Z" fill="var(--ink)"/>
-          <ellipse cx="253" cy="414" rx="64" ry="20" fill="var(--leaf)"/>
-          <path d="M216 414c9-4 23-6 37-6" stroke="var(--paper)" opacity=".7"/>
-          <g transform="rotate(-24 132 379)"><path d="M123 345h17v74a8 8 0 0 1-17 0Z" fill="var(--rust)"/><path d="M127 340v-39h9v39" fill="var(--paper)"/><path d="M123 345h17M131 355v48"/></g>
-          <path d="m381 408 13-7 13 7v15l-13 7-13-7Z" fill="var(--paper)"/><circle cx="394" cy="415" r="5"/>
-          <path d="m361 434 12-8m-5 12 12-8"/>
-          <path d="M80 171v-20h20m347 263h20v-20" stroke="var(--leaf)"/>
-        </g>
-      </svg>
-      <figcaption class="home-art-caption"><span>Dirawat. Dibenerin. Dipakai lagi.</span><span aria-hidden="true">↻</span></figcaption>
-      <span class="home-art-stamp" aria-hidden="true">REPAIR<br>BEFORE<br>REPLACE.</span>
+    <figure class="home-landscape">
+      <img src="{% static 'images/home/repair-landscape.webp' %}" width="2172" height="724" fetchpriority="high" alt="Ilustrasi lanskap hijau dengan perbukitan, sungai, pepohonan, dan bengkel reparasi kecil dengan sepeda di depannya.">
+      <figcaption class="sr-only">Rawat, perbaiki, dan beri barang kesempatan untuk dipakai lebih lama.</figcaption>
     </figure>
-    <div class="home-hero-baseline"><span>Kesempatan kedua untuk barang sehari-hari</span><span aria-hidden="true">Gulir untuk mulai ↓</span></div>
+    <div class="home-hero-baseline home-shell"><span>Kesempatan kedua untuk barang sehari-hari</span><span aria-hidden="true">Rawat · Perbaiki · Pakai lagi</span></div>
   </section>
 
   <section class="home-intro home-shell home-section" aria-labelledby="home-intro-title">
