@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Permintaan Saya | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--list" data-customer-list>
+    <div class="repair-shell">
+        {% include 'repair/_messages.html' %}
+        <div class="repair-page-heading">
+            <div>
+                <p class="repair-eyebrow">Ruang reparasimu</p>
+                <h1>Permintaan Saya</h1>
+                <p>Lihat perkembangan barang yang sedang dan pernah kamu percayakan kepada mitra.</p>
+            </div>
+            <a class="repair-button repair-button--primary" href="{% url 'repair:create' %}">Ajukan reparasi baru <span aria-hidden="true">→</span></a>
+        </div>
+
+        <form class="repair-list-filters" method="get" action="{% url 'repair:list' %}" data-customer-filters role="search">
+            <div class="repair-list-filter-field repair-list-filter-field--search">
+                <label for="repair-list-search">Cari permintaan</label>
+                <input id="repair-list-search" type="search" name="q" value="{{ search_query }}" placeholder="Barang atau mitra" autocomplete="off">
+            </div>
+            <div class="repair-list-filter-field">
+                <label for="repair-list-status">Status</label>
+                <select id="repair-list-status" name="status">
+                    <option value="">Semua status</option>
+                    {% for value, label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="repair-list-filter-field">
+                <label for="repair-list-category">Kategori</label>
+                <select id="repair-list-category" name="category">
+                    <option value="">Semua kategori</option>
+                    {% for value, label in category_choices %}<option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="repair-list-filter-actions">
+                <button class="repair-button repair-button--primary" type="submit">Terapkan</button>
+                <a class="repair-button repair-button--quiet" href="{% url 'repair:list' %}" data-customer-reset>Reset</a>
+            </div>
+        </form>
+
+        <p class="repair-sr-only" role="status" aria-live="polite" data-customer-live></p>
+        <div class="repair-ajax-notice" role="status" hidden data-customer-notice></div>
+        <div data-customer-results aria-busy="false">
+            {% include 'repair/_customer_results.html' %}
+        </div>
+    </div>
+</main>
+<script src="{% static 'js/repair.js' %}" defer></script>
+{% endblock content %}

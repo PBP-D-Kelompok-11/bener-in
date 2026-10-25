@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/reviews.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Review {{ mitra.nama_usaha }} — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="rv-page">
+  <h1 class="rv-title">Review untuk {{ mitra.nama_usaha }}</h1>
+
+  <div class="rv-card rv-card--accent rv-average">
+    {% if average %}
+      <span class="rv-average__value">{{ average }}</span>
+      <span class="rv-stars" role="img" aria-label="Rata-rata rating {{ average }} dari 5">{{ average_stars }}</span>
+      <span class="rv-meta">dari {{ total }} review</span>
+    {% else %}
+      <span class="rv-meta">Belum ada review untuk mitra ini.</span>
+    {% endif %}
+  </div>
+
+  {% if reviews %}
+    <ul class="rv-list">
+      {% for review in reviews %}
+        <li class="rv-card">
+          <div class="rv-card__top">
+            <span class="rv-card__title">{{ review.repair_request.customer.get_short_name }}</span>
+            <span class="rv-stars" role="img" aria-label="Rating {{ review.rating }} dari 5">{{ review.stars }}</span>
+          </div>
+          <p class="rv-meta">{{ review.repair_request.item_name }} · {{ review.created_at|date:"d/m/Y" }}</p>
+          {% if review.comment %}<p class="rv-comment">{{ review.comment }}</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock content %}

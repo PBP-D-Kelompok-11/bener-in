@@ -1,0 +1,42 @@
+/* Shared navigation only; page styles and business routes remain independent. */
+.site-header.bener-header { width: min(calc(100% - 3rem), 1200px); position: sticky; top: 1rem; z-index: 1100; margin: 1.25rem auto 0; border: 0; background: transparent; }
+.bener-header .bener-nav-container { max-width: none; margin: 0; padding: 0; }
+.bener-header .bener-nav { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1rem 1.5rem; background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 4px 0 rgb(20 38 28 / 5%); }
+.bener-nav [hidden] { display: none !important; }
+.bener-nav-brand { display: inline-flex; align-items: center; gap: .5rem; flex-shrink: 0; color: var(--ink); font: 700 1.5rem/1 var(--font-head); letter-spacing: -.065em; text-decoration: none; }
+.bener-nav-brand svg { width: 34px; height: 34px; color: var(--leaf); }
+.bener-nav-brand-dot { color: var(--leaf); }
+.bener-nav-brand:hover { color: var(--leaf); }
+.bener-nav-panel { display: flex; align-items: center; gap: 1.5rem; flex: 1; min-width: 0; }
+.bener-nav-links { display: flex; justify-content: center; align-items: center; flex: 1; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.bener-nav-links a { display: inline-flex; align-items: center; min-height: 44px; padding: .4rem 0; color: var(--ink); font-size: .85rem; font-weight: 700; text-decoration: none; text-underline-offset: 6px; }
+.bener-nav-links a:hover { color: var(--leaf); text-decoration: underline; }
+.bener-nav-account { display: flex; align-items: center; gap: .65rem; flex-shrink: 0; }
+.bener-nav-action { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: .65rem 1.1rem; border: 1px solid transparent; border-radius: 9px; font: 700 .85rem/1.4 var(--font-body); text-decoration: none; cursor: pointer; transition: background .18s, color .18s; }
+.bener-nav-primary { background: var(--leaf); color: #fff; }
+.bener-nav-primary:hover { background: var(--ink); }
+.bener-nav-secondary { color: var(--ink); background: transparent; }
+.bener-nav-secondary:hover { background: var(--paper); border-color: var(--line); }
+.bener-nav-toggle { position: relative; display: grid; align-content: center; justify-items: center; gap: 5px; flex-shrink: 0; width: 48px; height: 48px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; }
+.bener-nav-toggle span { display: block; width: 21px; height: 2px; background: currentColor; border-radius: 2px; transition: transform .18s, opacity .18s; }
+.bener-nav-toggle[aria-expanded="true"] span:first-child { transform: translateY(7px) rotate(45deg); }
+.bener-nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.bener-nav-toggle[aria-expanded="true"] span:last-child { transform: translateY(-7px) rotate(-45deg); }
+.bener-nav a:focus-visible, .bener-nav button:focus-visible { outline: 3px solid var(--rust); outline-offset: 4px; }
+@media (max-width: 900px) {
+  .site-header.bener-header { width: calc(100% - 2rem); top: .75rem; margin-top: 1rem; }
+  .bener-header .bener-nav { flex-wrap: wrap; gap: 1rem; padding: .8rem 1rem; border-radius: 17px; }
+  .bener-nav-brand { font-size: 1.4rem; }
+  .bener-nav-panel { flex: 1 0 100%; flex-direction: column; align-items: stretch; gap: 1rem; }
+  .bener-nav-links { flex-direction: column; align-items: stretch; gap: .2rem; }
+  .bener-nav-links a { min-height: 48px; padding: .7rem 1rem; border-radius: 8px; font-size: .95rem; }
+  .bener-nav-links a:hover { background: var(--paper); text-decoration: none; }
+  .bener-nav-account { border-top: 1px solid var(--line); padding-top: 1rem; }
+  .bener-nav-account > a, .bener-nav-account > form, .bener-nav-account button { flex: 1; }
+  .bener-nav-account button { width: 100%; }
+  .bener-nav-action { min-height: 48px; }
+  .bener-nav[data-enhanced] .bener-nav-panel { position: absolute; top: calc(100% + .6rem); left: 0; right: 0; padding: 1rem; border: 1px solid var(--line); border-radius: 17px; background: #fff; box-shadow: 0 12px 24px rgb(20 38 28 / 9%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bener-nav-action, .bener-nav-toggle span { transition: none; }
+}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Edit permintaan #{{ repair.pk }} | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--form">
+    <div class="repair-shell repair-shell--narrow">
+        <a class="repair-back-link" href="{% url 'repair:detail' repair.pk %}"><span aria-hidden="true">←</span> Detail permintaan</a>
+        {% include 'repair/_messages.html' %}
+        <div class="repair-management-card">
+            <p class="repair-eyebrow">Permintaan #{{ repair.pk }}</p>
+            <h1>Edit detail barang</h1>
+            <p class="repair-management-card__lead">Selagi berstatus Pending, kamu dapat memperjelas nama barang dan masalahnya. Kategori serta mitra penerima tetap sama.</p>
+            <dl class="repair-summary">
+                <div><dt>Kategori tetap</dt><dd>{{ repair.get_category_display }}</dd></div>
+                <div><dt>Mitra tetap</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
+            </dl>
+            <form method="post" action="{% url 'repair:edit' repair.pk %}" class="repair-edit-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="repair-form-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="repair-field">
+                    <label for="{{ form.item_name.id_for_label }}">{{ form.item_name.label }}</label>
+                    <p class="repair-hint" id="repair-edit-item-hint">Sebutkan jenis atau model barang jika kamu mengetahuinya.</p>
+                    {{ form.item_name }}
+                    <div class="repair-error" id="repair-edit-item-error" aria-live="polite">{{ form.item_name.errors }}</div>
+                </div>
+                <div class="repair-field">
+                    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                    <p class="repair-hint" id="repair-edit-description-hint">Jelaskan kondisi dan gejalanya agar mitra dapat memahami permintaanmu.</p>
+                    {{ form.description }}
+                    <div class="repair-error" id="repair-edit-description-error" aria-live="polite">{{ form.description.errors }}</div>
+                </div>
+                <div class="repair-actions">
+                    <a class="repair-button repair-button--quiet" href="{% url 'repair:detail' repair.pk %}">Kembali tanpa menyimpan</a>
+                    <button class="repair-button repair-button--primary" type="submit">Simpan perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock content %}

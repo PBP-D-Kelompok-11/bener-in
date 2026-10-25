@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/reviews.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Hapus review — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="rv-page">
+  <h1 class="rv-title">Hapus review?</h1>
+  <p class="rv-lead">Review ini akan dihapus permanen dan tidak bisa dikembalikan. Kamu tetap bisa menulis review baru untuk repair ini.</p>
+
+  <div class="rv-card">
+    <div class="rv-card__top">
+      <span class="rv-card__title">{{ review.repair_request.item_name }}</span>
+      <span class="rv-stars" role="img" aria-label="Rating {{ review.rating }} dari 5">{{ review.stars }}</span>
+    </div>
+    <p class="rv-meta">{{ review.repair_request.mitra.nama_usaha }}</p>
+    {% if review.comment %}<p class="rv-comment">{{ review.comment }}</p>{% endif %}
+  </div>
+
+  <form method="post" class="rv-actions rv-actions--page">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-solid">Ya, hapus review</button>
+    <a href="{% url 'reviews:mine' %}" class="btn btn-ghost">Batal</a>
+  </form>
+</main>
+{% endblock content %}

@@ -1,60 +1,57 @@
-{% extends 'base.html' %} {% load static %} {% block css %}
-<link rel="stylesheet" href="{% static 'css/impact.css' %}" />
-{% endblock css %} {% block meta %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/impact.css' %}">
+{% endblock css %}
+
+{% block meta %}
 <title>Impact tracker — bener.in</title>
-{% endblock meta %} {% block content %}
+{% endblock meta %}
+
+{% block content %}
 <main class="container tracker">
   <h1 class="tracker__title">Impact tracker</h1>
-  <p class="tracker__subtitle">
-    Setiap barang yang diperbaiki berarti satu sampah yang tidak jadi menumpuk.
-  </p>
+  <p class="tracker__subtitle">Setiap barang yang diperbaiki berarti satu sampah yang tidak jadi menumpuk.</p>
 
   <div class="tracker__card">
     <div class="tracker__count">{{ summary.saved_count }}</div>
     <div class="tracker__label">barang diselamatkan dari sampah</div>
 
     {% if summary.current_badge %}
-    <div class="tracker__current">
-      <span aria-hidden="true">{{ summary.current_badge.icon }}</span>
-      {{ summary.current_badge.name }}
-    </div>
+      <div class="tracker__current">
+        <img class="tracker__icon" src="{% static summary.current_badge.icon %}" alt="" width="20" height="20">
+        {{ summary.current_badge.name }}
+      </div>
     {% else %}
-    <div class="tracker__current tracker__current--empty">
-      Belum ada badge. Selesaikan repair pertamamu!
-    </div>
+      <div class="tracker__current tracker__current--empty">Belum ada badge. Selesaikan repair pertamamu!</div>
     {% endif %}
 
-    <progress
-      class="tracker__progress"
-      value="{{ summary.progress_percent }}"
-      max="100"
-    ></progress>
+    <progress class="tracker__progress" value="{{ summary.progress_percent }}" max="100"></progress>
 
     {% if summary.next_badge %}
-    <p class="tracker__hint">
-      {{ summary.remaining }} repair lagi menuju
-      <strong
-        >{{ summary.next_badge.icon }} {{ summary.next_badge.name }}</strong
-      >
-    </p>
+      <p class="tracker__hint">
+        {{ summary.remaining }} repair lagi menuju
+        <strong><img class="tracker__icon" src="{% static summary.next_badge.icon %}" alt="" width="20" height="20"> {{ summary.next_badge.name }}</strong>
+      </p>
     {% else %}
-    <p class="tracker__hint">
-      Kamu sudah mencapai badge tertinggi. Terima kasih sudah peduli lingkungan!
-    </p>
+      <p class="tracker__hint">Kamu sudah mencapai badge tertinggi. Terima kasih sudah peduli lingkungan!</p>
     {% endif %}
   </div>
 
   <h2 class="tracker__heading">Koleksi badge</h2>
   <ul class="tracker__badges">
     {% for badge in summary.badges %}
-    <li
-      class="badge {% if badge.unlocked %}badge--unlocked{% else %}badge--locked{% endif %}"
-    >
-      <span class="badge__icon" aria-hidden="true">{{ badge.icon }}</span>
-      <span class="badge__name">{{ badge.name }}</span>
-      <span class="badge__req">{{ badge.min }} repair</span>
-    </li>
+      <li class="badge {% if badge.unlocked %}badge--unlocked{% else %}badge--locked{% endif %}">
+        <img class="badge__icon" src="{% static badge.icon %}" alt="" width="40" height="40">
+        <span class="badge__name">{{ badge.name }}</span>
+        <span class="badge__req">{{ badge.min }} repair</span>
+      </li>
     {% endfor %}
   </ul>
+
+  <div class="tracker__actions">
+    <a href="{% url 'reviews:mine' %}" class="btn btn-outline">Review saya</a>
+  </div>
 </main>
 {% endblock content %}

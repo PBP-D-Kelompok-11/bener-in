@@ -1,0 +1,21 @@
+<section class="repair-mitra-results" data-mitra-result-content data-result-count="{{ result_count }}" data-incoming-count="{{ counts.incoming }}" data-active-count="{{ counts.active }}" data-history-count="{{ counts.history }}" aria-labelledby="mitra-results-heading">
+    <div class="repair-mitra-results__heading">
+        <div>
+            <p class="repair-eyebrow">{% if group == 'incoming' %}Butuh tanggapan{% elif group == 'active' %}Sedang dikerjakan{% else %}Arsip pekerjaan{% endif %}</p>
+            <h2 id="mitra-results-heading">{% if group == 'incoming' %}Permintaan masuk{% elif group == 'active' %}Reparasi aktif{% else %}Riwayat{% endif %}</h2>
+        </div>
+        <p>{{ result_count }} permintaan</p>
+    </div>
+    {% if repairs %}
+    <div class="repair-work-grid">
+        {% for repair in repairs %}
+            {% include 'repair/_mitra_request_card.html' %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="repair-empty-state">
+        <h3>{% if search_query or category_filter or status_filter %}Tidak ada hasil yang cocok.{% elif group == 'incoming' %}Belum ada permintaan masuk.{% elif group == 'active' %}Belum ada reparasi aktif.{% else %}Belum ada riwayat reparasi.{% endif %}</h3>
+        <p>{% if search_query or category_filter or status_filter %}Ubah pencarian atau reset filter untuk melihat permintaan lain.{% elif group == 'incoming' %}Permintaan baru dari pelanggan akan muncul di sini.{% elif group == 'active' %}Permintaan yang diterima akan muncul di sini.{% else %}Reparasi selesai dan keputusan akhir akan tersimpan di sini.{% endif %}</p>
+    </div>
+    {% endif %}
+</section>

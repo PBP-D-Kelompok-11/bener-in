@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}<title>Permintaan terkirim | bener.in</title>{% endblock meta %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+
+{% block content %}
+<main class="repair-page repair-page--confirmation">
+    <div class="repair-shell">
+        <div class="repair-confirmation">
+            <span class="repair-confirmation__icon" aria-hidden="true">✓</span>
+            <p class="repair-eyebrow">Permintaan #{{ repair.pk }}</p>
+            <h1>Permintaan reparasimu terkirim.</h1>
+            <p>Permintaan untuk <strong>{{ repair.mitra.nama_usaha }}</strong> sudah tercatat dengan status <strong>{{ repair.get_status_display }}</strong>.</p>
+            <dl class="repair-summary">
+                <div><dt>Barang</dt><dd>{{ repair.item_name }}</dd></div>
+                <div><dt>Kategori</dt><dd>{{ repair.get_category_display }}</dd></div>
+                <div><dt>Mitra penerima</dt><dd>{{ repair.mitra.nama_usaha }}</dd></div>
+                <div><dt>Dikirim pada</dt><dd>{{ repair.created_at|date:"d M Y, H:i" }}</dd></div>
+            </dl>
+            <p class="repair-confirmation__note">Simpan nomor permintaan ini sebagai referensi. Mitra penerima dan status awal tercantum di atas.</p>
+            <div class="repair-actions">
+                <a class="repair-button repair-button--primary" href="{% url 'repair:detail' repair.pk %}">Lihat detail permintaan</a>
+                <a class="repair-button repair-button--quiet" href="{% url 'repair:create' %}">Ajukan barang lain</a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock content %}
