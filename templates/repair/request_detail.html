@@ -26,6 +26,16 @@
                 <a class="repair-button repair-button--danger" href="{% url 'repair:cancel' repair.pk %}">Batalkan permintaan</a>
             </div>
             {% endif %}
+
+            {% if viewer_is_customer and repair.status == 'completed' %}
+            <div class="repair-actions repair-actions--start">
+                {% if repair.review %}
+                <a class="repair-button repair-button--quiet" href="{% url 'reviews:edit' repair.review.pk %}">Ubah review</a>
+                {% else %}
+                <a class="repair-button" href="{% url 'reviews:create' repair.pk %}">Beri review</a>
+                {% endif %}
+            </div>
+            {% endif %}
         </header>
 
         <div class="repair-detail-grid">

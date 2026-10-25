@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/reviews.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>{% if is_edit %}Ubah review{% else %}Tulis review{% endif %} — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="rv-page">
+  <h1 class="rv-title">{% if is_edit %}Ubah review{% else %}Tulis review{% endif %}</h1>
+  <p class="rv-lead">Bagaimana pengalamanmu memperbaiki barang ini?</p>
+
+  <div class="rv-card rv-card--accent rv-summary">
+    <span class="rv-card__title">{{ repair.item_name }}</span>
+    <span class="rv-meta">Mitra: {{ repair.mitra.nama_usaha }}</span>
+  </div>
+
+  <form method="post" class="auth-form rv-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+
+    <fieldset class="rv-fieldset">
+      <legend>Rating</legend>
+      <div class="rv-rating">
+        {% for radio in form.rating %}
+          <label for="{{ radio.id_for_label }}">{{ radio.tag }} <span>{{ radio.choice_label }}</span></label>
+        {% endfor %}
+      </div>
+      {{ form.rating.errors }}
+    </fieldset>
+
+    <div class="field">
+      <label for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+      {{ form.comment }}
+      {{ form.comment.errors }}
+    </div>
+
+    <div class="rv-actions">
+      <button type="submit" class="btn btn-solid">{% if is_edit %}Simpan perubahan{% else %}Kirim review{% endif %}</button>
+      <a href="{% url 'reviews:mine' %}" class="btn btn-ghost">Batal</a>
+    </div>
+  </form>
+</main>
+{% endblock content %}

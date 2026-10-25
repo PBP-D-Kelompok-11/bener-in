@@ -1,0 +1,7 @@
+{% if messages %}
+<ul class="rv-messages" aria-live="polite">
+  {% for message in messages %}
+    <li class="rv-message{% if message.tags == 'error' %} rv-message--error{% endif %}">{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}

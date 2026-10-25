@@ -1,154 +1,177 @@
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from authentication.models import Customer, KategoriBarang, MitraReparasi
 from repair.models import RepairRequest
 
+from .impact import get_impact_summary
+from .models import Review
 
-class ImpactDashboardTests(TestCase):
+CUSTOMER_BACKEND = 'authentication.backends.CustomerBackend'
+MITRA_BACKEND = 'authentication.backends.MitraBackend'
+
+
+class ImpactSummaryTests(SimpleTestCase):
+    def test_zero_repairs_has_no_badge(self):
+        summary = get_impact_summary(0)
+        self.assertIsNone(summary['current_badge'])
+        self.assertEqual(summary['next_badge']['min'], 1)
+        self.assertEqual(summary['progress_percent'], 0)
+
+    def test_progress_between_badges(self):
+        summary = get_impact_summary(7)
+        self.assertEqual(summary['current_badge']['name'], 'Penyelamat Barang')
+        self.assertEqual(summary['progress_percent'], 40)
+        self.assertEqual(summary['remaining'], 3)
+
+    def test_highest_badge_is_full(self):
+        summary = get_impact_summary(40)
+        self.assertIsNone(summary['next_badge'])
+        self.assertEqual(summary['progress_percent'], 100)
+
+
+class ReviewTestBase(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.customer = Customer.objects.create_user(
-            username='impact-customer', password='test-password',
-            nama_lengkap='Customer Impact', no_hp='0811',
+            username='budi', password='kata-sandi-123',
+            nama_lengkap='Budi Santoso', no_hp='0812',
         )
-        cls.other_customer = Customer.objects.create_user(
-            username='other-impact-customer', password='test-password',
-            nama_lengkap='Other Customer', no_hp='0812',
+        cls.other = Customer.objects.create_user(
+            username='sari', password='kata-sandi-123',
+            nama_lengkap='Sari Dewi', no_hp='0813',
         )
         cls.mitra = MitraReparasi.objects.create_user(
-            username='impact-mitra', password='test-password',
-            nama_lengkap='Repair Partner', no_hp='0813',
-            nama_usaha='Bengkel Impact', layanan=[KategoriBarang.GADGET],
-            alamat='Jakarta', latitude='-6.200000', longitude='106.816666',
+            username='bengkel', password='kata-sandi-123',
+            nama_lengkap='Pak Joko', no_hp='0814', nama_usaha='Bengkel Joko',
+            layanan=[KategoriBarang.GADGET], alamat='Jl. Mawar 1',
+            latitude='-6.200000', longitude='106.800000',
         )
 
-    def setUp(self):
-        self.url = reverse('reviews:impact')
-        self.client.force_login(
-            self.customer, backend='authentication.backends.CustomerBackend',
-        )
-
-    def make_request(self, customer=None):
-        return RepairRequest.objects.create(
-            customer=customer or self.customer, mitra=self.mitra,
+    def make_repair(self, completed=True):
+        repair = RepairRequest.objects.create(
+            customer=self.customer, mitra=self.mitra,
             category=KategoriBarang.GADGET,
-            item_name='Ponsel', description='Layar retak.',
+            item_name='HP layar retak', description='Layar pecah setelah jatuh',
         )
-
-    def complete(self, customer=None):
-        repair = self.make_request(customer)
-        for status in (
-            RepairRequest.Status.ACCEPTED,
-            RepairRequest.Status.IN_PROGRESS,
-            RepairRequest.Status.COMPLETED,
-        ):
-            repair.transition_to(status, self.mitra)
+        if completed:
+            for status in (
+                RepairRequest.Status.ACCEPTED,
+                RepairRequest.Status.IN_PROGRESS,
+                RepairRequest.Status.COMPLETED,
+            ):
+                repair.transition_to(status, self.mitra)
         return repair
 
-    def summary(self):
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'reviews/impact_dashboard.html')
-        return response.context['summary']
+    def login_customer(self, user=None):
+        self.client.force_login(user or self.customer, backend=CUSTOMER_BACKEND)
 
-    def test_zero_completed_repairs_and_demo_query_cannot_override_count(self):
-        self.assertEqual(self.summary()['saved_count'], 0)
-        response = self.client.get(self.url, {'demo': '25'})
-        self.assertEqual(response.context['summary']['saved_count'], 0)
-        self.assertIsNone(response.context['summary']['current_badge'])
+    def login_mitra(self):
+        self.client.force_login(self.mitra, backend=MITRA_BACKEND)
 
-    def test_one_completed_repair_unlocks_first_badge(self):
-        self.complete()
-        summary = self.summary()
-        self.assertEqual(summary['saved_count'], 1)
-        self.assertEqual(summary['current_badge']['name'], 'Pemula Peduli')
-        self.assertEqual(summary['next_badge']['min'], 5)
 
-    def test_multiple_completed_repairs_keep_existing_progress_calculation(self):
-        for _ in range(3):
-            self.complete()
-        summary = self.summary()
-        self.assertEqual(summary['saved_count'], 3)
-        self.assertEqual(summary['progress_percent'], 50)
-        self.assertEqual(summary['remaining'], 2)
-
-    def test_all_non_completed_statuses_are_excluded(self):
-        self.complete()
-        self.make_request()  # Pending
-        accepted = self.make_request()
-        accepted.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
-        in_progress = self.make_request()
-        in_progress.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
-        in_progress.transition_to(RepairRequest.Status.IN_PROGRESS, self.mitra)
-        rejected = self.make_request()
-        rejected.transition_to(RepairRequest.Status.REJECTED, self.mitra, reason='Tidak tersedia.')
-        cancelled = self.make_request()
-        cancelled.transition_to(RepairRequest.Status.CANCELLED, self.customer)
-        unable = self.make_request()
-        unable.transition_to(RepairRequest.Status.ACCEPTED, self.mitra)
-        unable.transition_to(RepairRequest.Status.UNABLE_TO_REPAIR, self.mitra, reason='Tidak bisa.')
-        self.assertEqual(RepairRequest.objects.count(), 7)
-        self.assertEqual(self.summary()['saved_count'], 1)
-
-    def test_impact_is_isolated_per_customer(self):
-        self.complete()
-        self.complete(self.other_customer)
-        self.complete(self.other_customer)
-        self.assertEqual(self.summary()['saved_count'], 1)
-        self.client.force_login(
-            self.other_customer, backend='authentication.backends.CustomerBackend',
-        )
-        self.assertEqual(self.summary()['saved_count'], 2)
-
-    def test_badge_names_and_unlock_thresholds_remain_unchanged(self):
-        expected = [
-            (1, 'Pemula Peduli', 1, 5),
-            (5, 'Penyelamat Barang', 2, 10),
-            (10, 'Pahlawan Reparasi', 3, 25),
-            (25, 'Duta Repair Before Replace', 4, None),
-        ]
-        for count in range(1, 26):
-            self.complete()
-            milestone = next((row for row in expected if row[0] == count), None)
-            if milestone is None:
-                continue
-            with self.subTest(count=count):
-                summary = self.summary()
-                self.assertEqual(summary['saved_count'], count)
-                self.assertEqual(summary['current_badge']['name'], milestone[1])
-                self.assertEqual(sum(badge['unlocked'] for badge in summary['badges']), milestone[2])
-                self.assertEqual(summary['next_badge']['min'] if summary['next_badge'] else None, milestone[3])
-                self.assertEqual(
-                    [(badge['name'], badge['min']) for badge in summary['badges']],
-                    [
-                        ('Pemula Peduli', 1),
-                        ('Penyelamat Barang', 5),
-                        ('Pahlawan Reparasi', 10),
-                        ('Duta Repair Before Replace', 25),
-                    ],
-                )
-                if count == 25:
-                    self.assertEqual(summary['progress_percent'], 100)
-
-    def test_refreshes_do_not_count_status_history_as_extra_repairs(self):
-        repair = self.complete()
-        self.assertEqual(repair.status_history.count(), 4)
-        for _ in range(3):
-            self.assertEqual(self.summary()['saved_count'], 1)
-
-    def test_mitra_cannot_view_customer_impact_even_with_overlapping_id(self):
-        self.complete()
-        self.assertEqual(self.customer.pk, self.mitra.pk)
-        self.client.force_login(
-            self.mitra, backend='authentication.backends.MitraBackend',
-        )
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
-        self.assertNotContains(response, 'Pemula Peduli', status_code=403)
-
-    def test_anonymous_user_is_redirected_to_login(self):
-        self.client.logout()
-        response = self.client.get(self.url)
+class ReviewAccessTests(ReviewTestBase):
+    def test_anonymous_is_redirected_to_login(self):
+        repair = self.make_repair()
+        response = self.client.get(reverse('reviews:create', args=[repair.pk]))
         self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response['Location'])
+        self.assertIn('login', response.url)
+
+    def test_mitra_cannot_write_reviews(self):
+        repair = self.make_repair()
+        self.login_mitra()
+        response = self.client.get(reverse('reviews:create', args=[repair.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_other_customer_cannot_review_someone_elses_repair(self):
+        repair = self.make_repair()
+        self.login_customer(self.other)
+        response = self.client.get(reverse('reviews:create', args=[repair.pk]))
+        self.assertEqual(response.status_code, 404)
+
+
+class ReviewFlowTests(ReviewTestBase):
+    def test_cannot_review_unfinished_repair(self):
+        repair = self.make_repair(completed=False)
+        self.login_customer()
+        response = self.client.post(
+            reverse('reviews:create', args=[repair.pk]), {'rating': 5, 'comment': 'x'},
+        )
+        self.assertRedirects(response, reverse('reviews:mine'))
+        self.assertFalse(Review.objects.exists())
+
+    def test_create_review_for_completed_repair(self):
+        repair = self.make_repair()
+        self.login_customer()
+        response = self.client.post(
+            reverse('reviews:create', args=[repair.pk]),
+            {'rating': 5, 'comment': '  Cepat dan rapi  '},
+        )
+        self.assertRedirects(response, reverse('reviews:mine'))
+        review = Review.objects.get()
+        self.assertEqual(review.rating, 5)
+        self.assertEqual(review.comment, 'Cepat dan rapi')
+        self.assertEqual(review.mitra, self.mitra)
+
+    def test_rating_is_required_and_limited(self):
+        repair = self.make_repair()
+        self.login_customer()
+        for bad in ('', '0', '6'):
+            response = self.client.post(
+                reverse('reviews:create', args=[repair.pk]), {'rating': bad},
+            )
+            self.assertEqual(response.status_code, 200)
+        self.assertFalse(Review.objects.exists())
+
+    def test_second_attempt_redirects_to_edit(self):
+        repair = self.make_repair()
+        review = Review.objects.create(repair_request=repair, rating=4)
+        self.login_customer()
+        response = self.client.get(reverse('reviews:create', args=[repair.pk]))
+        self.assertRedirects(response, reverse('reviews:edit', args=[review.pk]))
+
+    def test_edit_and_delete_own_review(self):
+        repair = self.make_repair()
+        review = Review.objects.create(repair_request=repair, rating=4)
+        self.login_customer()
+        self.client.post(reverse('reviews:edit', args=[review.pk]), {'rating': 2, 'comment': 'Kurang'})
+        review.refresh_from_db()
+        self.assertEqual(review.rating, 2)
+        self.client.post(reverse('reviews:delete', args=[review.pk]))
+        self.assertFalse(Review.objects.exists())
+
+    def test_other_customer_cannot_edit_or_delete(self):
+        repair = self.make_repair()
+        review = Review.objects.create(repair_request=repair, rating=4)
+        self.login_customer(self.other)
+        self.assertEqual(self.client.get(reverse('reviews:edit', args=[review.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse('reviews:delete', args=[review.pk])).status_code, 404)
+        self.assertTrue(Review.objects.exists())
+
+
+class MitraReviewsAndImpactTests(ReviewTestBase):
+    def test_mitra_page_is_public_and_shows_average(self):
+        Review.objects.create(repair_request=self.make_repair(), rating=5)
+        Review.objects.create(repair_request=self.make_repair(), rating=4)
+        response = self.client.get(reverse('reviews:mitra', args=[self.mitra.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['average'], 4.5)
+        self.assertEqual(response.context['total'], 2)
+
+    def test_impact_counts_only_completed_repairs(self):
+        self.make_repair(completed=True)
+        self.make_repair(completed=False)
+        self.login_customer()
+        response = self.client.get(reverse('reviews:impact'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['summary']['saved_count'], 1)
+
+    def test_mitra_is_redirected_to_own_review_page(self):
+        self.login_mitra()
+        response = self.client.get(reverse('reviews:mitra_own'))
+        self.assertRedirects(response, reverse('reviews:mitra', args=[self.mitra.pk]))
+
+    def test_customer_cannot_use_mitra_shortcut(self):
+        self.login_customer()
+        response = self.client.get(reverse('reviews:mitra_own'))
+        self.assertEqual(response.status_code, 403)

@@ -38,9 +38,11 @@
                         <a href="{% url 'landing_page' %}#cari-mitra">Cari Mitra</a>
                         <a href="/repair/">Permintaan Saya</a>
                         <a href="{% url 'reviews:impact' %}">Impact</a>
+                        <a href="{% url 'reviews:mine' %}" class="btn btn-ghost">Review</a>
                     {% elif user.role == 'mitra' %}
                         <a href="/repair/incoming/">Permintaan Masuk</a>
                         <a href="/mitra/profile/">Profil Mitra</a>
+                        <a href="{% url 'reviews:mitra_own' %}" class="btn btn-ghost">Review</a>
                     {% endif %}
                 {% else %}
                     <a href="{% url 'landing_page' %}#cari-mitra">Cari reparasi</a>

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/reviews.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Review saya — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="rv-page">
+  <h1 class="rv-title">Review saya</h1>
+  <p class="rv-lead">Nilai mitra setelah barangmu selesai diperbaiki. Review membantu customer lain memilih mitra yang tepat.</p>
+
+  {% include 'reviews/_messages.html' %}
+
+  <h2 class="rv-heading">Menunggu review</h2>
+  {% if pending %}
+    <ul class="rv-list">
+      {% for repair in pending %}
+        <li class="rv-card rv-card--accent">
+          <div class="rv-card__top">
+            <span class="rv-card__title">{{ repair.item_name }}</span>
+            <span class="rv-meta">{{ repair.mitra.nama_usaha }}</span>
+          </div>
+          <div class="rv-actions">
+            <a href="{% url 'reviews:create' repair.pk %}" class="btn btn-solid">Tulis review</a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="rv-empty">Tidak ada repair yang menunggu review. Review bisa ditulis setelah mitra mengubah status repair menjadi Completed.</p>
+  {% endif %}
+
+  <h2 class="rv-heading">Review yang sudah kamu tulis</h2>
+  {% if reviews %}
+    <ul class="rv-list">
+      {% for review in reviews %}
+        <li class="rv-card">
+          <div class="rv-card__top">
+            <span class="rv-card__title">{{ review.repair_request.item_name }}</span>
+            <span class="rv-stars" role="img" aria-label="Rating {{ review.rating }} dari 5">{{ review.stars }}</span>
+          </div>
+          <p class="rv-meta">
+            <a href="{% url 'reviews:mitra' review.repair_request.mitra_id %}">{{ review.repair_request.mitra.nama_usaha }}</a>
+            · {{ review.created_at|date:"d/m/Y" }}
+          </p>
+          {% if review.comment %}<p class="rv-comment">{{ review.comment }}</p>{% endif %}
+          <div class="rv-actions">
+            <a href="{% url 'reviews:edit' review.pk %}" class="btn btn-outline">Ubah</a>
+            <a href="{% url 'reviews:delete' review.pk %}" class="btn btn-ghost">Hapus</a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="rv-empty">Kamu belum menulis review.</p>
+  {% endif %}
+
+  <div class="rv-actions rv-actions--page">
+    <a href="{% url 'reviews:impact' %}" class="btn btn-outline">Lihat impact tracker</a>
+  </div>
+</main>
+{% endblock content %}

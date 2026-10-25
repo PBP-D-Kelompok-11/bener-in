@@ -1,6 +1,4 @@
-/* Halaman Impact tracker (Modul E).
-   Memakai token dari style.css: --ink, --leaf, --lime, --paper, --line, --font-head.
-   Semua kelas diawali "tracker" supaya tidak bentrok dengan .impact di style.css. */
+/* module E */
 
 main.tracker {
   max-width: 760px;
@@ -10,8 +8,8 @@ main.tracker {
 
 .tracker__title {
   font-size: clamp(2rem, 5vw, 3rem);
-  letter-spacing: -0.02em;
-  margin-bottom: 0.75rem;
+  letter-spacing: -.02em;
+  margin-bottom: .75rem;
 }
 
 .tracker__subtitle {
@@ -32,18 +30,18 @@ main.tracker {
 
 .tracker__count {
   font: 700 clamp(3.5rem, 10vw, 5.5rem) / 1 var(--font-head);
-  letter-spacing: -0.03em;
+  letter-spacing: -.03em;
 }
 
 .tracker__label {
-  margin: 0.5rem 0 1.25rem;
+  margin: .5rem 0 1.25rem;
   color: #3f4c43;
 }
 
 .tracker__current {
   display: inline-block;
   margin-bottom: 1.5rem;
-  padding: 0.35rem 1rem;
+  padding: .35rem 1rem;
   background: var(--lime);
   border: 2px solid var(--ink);
   border-radius: 999px;
@@ -83,7 +81,7 @@ main.tracker {
 }
 
 .tracker__hint {
-  margin-top: 0.9rem;
+  margin-top: .9rem;
   color: #3f4c43;
 }
 
@@ -97,15 +95,19 @@ main.tracker {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
+}
+
+.tracker__actions {
+  margin-top: 2rem;
 }
 
 .badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: .25rem;
   padding: 1.1rem 1rem;
   background: #fff;
   border: 2px solid var(--ink);
@@ -123,7 +125,7 @@ main.tracker {
 }
 
 .badge__req {
-  font-size: 0.85rem;
+  font-size: .85rem;
   color: #5d685f;
 }
 
@@ -134,6 +136,6 @@ main.tracker {
 .badge--locked {
   background: transparent;
   border-color: var(--line);
-  opacity: 0.55;
+  opacity: .55;
   filter: grayscale(1);
 }
