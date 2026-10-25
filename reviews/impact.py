@@ -2,10 +2,10 @@
 """
 
 BADGES = [
-    {"name": "Pemula Peduli", "min": 1, "icon": "🌱"},
-    {"name": "Penyelamat Barang", "min": 5, "icon": "🔧"},
-    {"name": "Pahlawan Reparasi", "min": 10, "icon": "♻️"},
-    {"name": "Duta Repair Before Replace", "min": 25, "icon": "🌍"},
+    {"name": "Mulai Bener", "min": 1, "icon": "images/badges/thumb-up.svg"},
+    {"name": "Makin Bener", "min": 5, "icon": "images/badges/trash-off.svg"},
+    {"name": "Paham Bener", "min": 10, "icon": "images/badges/battery-4.svg"},
+    {"name": "Bener Banget", "min": 25, "icon": "images/badges/flame.svg"},
 ]
 
 
