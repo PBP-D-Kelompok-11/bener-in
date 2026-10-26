@@ -11,7 +11,8 @@
 
 {% block content %}
 <main class="rv-page">
-  <h1 class="rv-title">Review untuk {{ mitra.nama_usaha }}</h1>
+  <p class="rv-eyebrow">Review customer</p>
+  <h1 class="rv-title">Review untuk <em>{{ mitra.nama_usaha }}</em></h1>
 
   <div class="rv-card rv-card--accent rv-average">
     {% if average %}
