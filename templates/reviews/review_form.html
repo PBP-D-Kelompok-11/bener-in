@@ -11,7 +11,8 @@
 
 {% block content %}
 <main class="rv-page">
-  <h1 class="rv-title">{% if is_edit %}Ubah review{% else %}Tulis review{% endif %}</h1>
+  <p class="rv-eyebrow">{% if is_edit %}Ubah review{% else %}Review baru{% endif %}</p>
+  <h1 class="rv-title">{% if is_edit %}Ubah <em>review</em>{% else %}Tulis <em>review</em>{% endif %}</h1>
   <p class="rv-lead">Bagaimana pengalamanmu memperbaiki barang ini?</p>
 
   <div class="rv-card rv-card--accent rv-summary">

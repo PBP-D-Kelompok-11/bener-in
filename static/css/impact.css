@@ -1,34 +1,12 @@
-main.tracker {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 4rem 5vw 5rem;
-}
- 
-.tracker__title {
-  font-size: clamp(2rem, 5vw, 3rem);
-  letter-spacing: -.02em;
-  margin-bottom: .75rem;
-}
- 
-.tracker__subtitle {
-  max-width: 52ch;
-  margin-bottom: 2.5rem;
-  font-size: 1.1rem;
-  color: #3f4c43;
-}
- 
 .tracker__card {
-  background: #fff;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 8px 8px 0 var(--lime);
+  padding: 2rem 1.6rem;
   text-align: center;
 }
  
 .tracker__count {
   font: 700 clamp(3.5rem, 10vw, 5.5rem) / 1 var(--font-head);
   letter-spacing: -.03em;
+  color: var(--leaf);
 }
  
 .tracker__label {
@@ -37,44 +15,53 @@ main.tracker {
 }
  
 .tracker__current {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
   margin-bottom: 1.5rem;
-  padding: .35rem 1rem;
+  padding: .4rem 1rem;
   background: var(--lime);
-  border: 2px solid var(--ink);
   border-radius: 999px;
   font-weight: 700;
+  color: var(--ink);
 }
  
 .tracker__current--empty {
-  background: transparent;
-  border-color: var(--line);
-  color: #5d685f;
+  background: rgba(255, 255, 255, .6);
+  border: 1px dashed rgba(20, 38, 28, .25);
+  color: #3f4c43;
   font-weight: 500;
 }
  
+.tracker__icon {
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -.25em;
+}
+ 
+/* ---------- Progress ---------- */
 .tracker__progress {
   display: block;
   width: 100%;
-  height: 22px;
-  border: 2px solid var(--ink);
+  height: 16px;
+  border: 0;
   border-radius: 999px;
   overflow: hidden;
   appearance: none;
-  background: #eef0e4;
+  background: #e7ecdc;
 }
  
 .tracker__progress::-webkit-progress-bar {
-  background: #eef0e4;
+  background: #e7ecdc;
 }
  
 .tracker__progress::-webkit-progress-value {
-  background: var(--lime);
+  background: linear-gradient(90deg, var(--lime), var(--leaf));
   border-radius: 999px;
 }
  
 .tracker__progress::-moz-progress-bar {
-  background: var(--lime);
+  background: linear-gradient(90deg, var(--lime), var(--leaf));
   border-radius: 999px;
 }
  
@@ -83,45 +70,38 @@ main.tracker {
   color: #3f4c43;
 }
  
-.tracker__heading {
-  margin: 3rem 0 1.25rem;
-  font-size: clamp(1.4rem, 3vw, 1.8rem);
-}
- 
+/* ---------- Koleksi badge ---------- */
 .tracker__badges {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-}
- 
-.tracker__actions {
-  margin-top: 2rem;
 }
  
 .badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .25rem;
-  padding: 1.1rem 1rem;
+  gap: .3rem;
+  padding: 1.1rem .5rem;
   background: #fff;
-  border: 2px solid var(--ink);
-  border-radius: 10px;
+  border: 1px solid rgba(20, 38, 28, .08);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(20, 38, 28, .07);
   text-align: center;
 }
  
+/* Ikon di dalam lingkaran lime (terbuka) atau abu-abu (terkunci) */
 .badge__icon {
-  width: 40px;
-  height: 40px;
-}
- 
-.tracker__icon {
-  width: 1.25em;
-  height: 1.25em;
-  vertical-align: -.25em;
+  box-sizing: border-box;
+  width: 3.6rem;
+  height: 3.6rem;
+  margin-bottom: .4rem;
+  padding: .75rem;
+  border-radius: 50%;
+  background: var(--lime);
 }
  
 .badge__name {
@@ -133,14 +113,20 @@ main.tracker {
   color: #5d685f;
 }
  
-.badge--unlocked {
-  box-shadow: 4px 4px 0 var(--lime);
-}
- 
 .badge--locked {
-  background: transparent;
-  border-color: var(--line);
-  opacity: .55;
+  background: rgba(255, 255, 255, .55);
+  border: 1px dashed rgba(20, 38, 28, .22);
+  box-shadow: none;
+  opacity: .6;
   filter: grayscale(1);
 }
  
+.badge--locked .badge__icon {
+  background: #dfe3d8;
+}
+ 
+@media (max-width: 560px) {
+  .tracker__card { padding: 1.5rem 1.15rem; }
+  .tracker__badges { grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+  .badge { padding: 1.1rem .6rem; }
+}

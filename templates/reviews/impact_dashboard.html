@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block css %}
+<link rel="stylesheet" href="{% static 'css/reviews.css' %}">
 <link rel="stylesheet" href="{% static 'css/impact.css' %}">
 {% endblock css %}
 
@@ -10,11 +11,12 @@
 {% endblock meta %}
 
 {% block content %}
-<main class="container tracker">
-  <h1 class="tracker__title">Impact tracker</h1>
-  <p class="tracker__subtitle">Setiap barang yang diperbaiki berarti satu sampah yang tidak jadi menumpuk.</p>
+<main class="rv-page tracker">
+  <p class="rv-eyebrow">Dampakmu</p>
+  <h1 class="rv-title">Impact <em>tracker</em></h1>
+  <p class="rv-lead">Setiap barang yang diperbaiki berarti satu sampah yang tidak jadi menumpuk.</p>
 
-  <div class="tracker__card">
+  <div class="rv-card rv-card--accent tracker__card">
     <div class="tracker__count">{{ summary.saved_count }}</div>
     <div class="tracker__label">barang diselamatkan dari sampah</div>
 
@@ -39,7 +41,7 @@
     {% endif %}
   </div>
 
-  <h2 class="tracker__heading">Koleksi badge</h2>
+  <h2 class="rv-heading">Koleksi badge</h2>
   <ul class="tracker__badges">
     {% for badge in summary.badges %}
       <li class="badge {% if badge.unlocked %}badge--unlocked{% else %}badge--locked{% endif %}">
@@ -50,7 +52,7 @@
     {% endfor %}
   </ul>
 
-  <div class="tracker__actions">
+  <div class="rv-actions rv-actions--page">
     <a href="{% url 'reviews:mine' %}" class="btn btn-outline">Review saya</a>
   </div>
 </main>

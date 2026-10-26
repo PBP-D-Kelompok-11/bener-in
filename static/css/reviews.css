@@ -2,30 +2,68 @@
    --ink, --lime, --leaf, --line, --rust, .btn, .field, .auth-form, .errorlist.
    Semua kelas diawali "rv-" supaya tidak bentrok dengan kelas milik teman. */
 
+body:has(.rv-page) {
+  background:
+    linear-gradient(180deg, #c8e7f0 0, #dbeff4 240px, var(--paper) 560px) no-repeat,
+    var(--paper);
+}
+ 
 .rv-page {
-  max-width: 760px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 4rem 5vw 5rem;
 }
-
-.rv-title {
-  font-size: clamp(2rem, 5vw, 3rem);
-  letter-spacing: -.02em;
-  margin-bottom: .75rem;
+ 
+/* ---------- Judul ---------- */
+.rv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1rem;
+  padding: .4rem .9rem;
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid rgba(20, 38, 28, .1);
+  border-radius: 999px;
+  font: 700 .72rem / 1 var(--font-body);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
-
+ 
+.rv-eyebrow::before {
+  content: "";
+  width: .45rem;
+  height: .45rem;
+  border-radius: 50%;
+  background: var(--leaf);
+}
+ 
+.rv-title {
+  margin-bottom: 1rem;
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  line-height: 1.05;
+  letter-spacing: -.03em;
+}
+ 
+.rv-title em {
+  font-style: normal;
+  color: var(--leaf);
+}
+ 
 .rv-lead {
   max-width: 52ch;
-  margin-bottom: 2rem;
+  margin-bottom: 2.25rem;
   font-size: 1.1rem;
   color: #3f4c43;
 }
-
+ 
 .rv-heading {
-  margin: 2.5rem 0 1rem;
-  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  margin: 2.75rem 0 1rem;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  letter-spacing: -.01em;
 }
-
+ 
+/* ---------- Kartu ---------- */
 .rv-list {
   list-style: none;
   margin: 0;
@@ -33,18 +71,20 @@
   display: grid;
   gap: 1rem;
 }
-
+ 
 .rv-card {
   background: #fff;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(20, 38, 28, .08);
+  border-radius: 20px;
+  padding: 1.35rem 1.6rem;
+  box-shadow: 0 10px 30px rgba(20, 38, 28, .07);
 }
-
+ 
+/* Garis lime di sisi kiri untuk kartu yang perlu perhatian */
 .rv-card--accent {
-  box-shadow: 6px 6px 0 var(--lime);
+  box-shadow: 0 10px 30px rgba(20, 38, 28, .07), inset 5px 0 0 var(--lime);
 }
-
+ 
 .rv-card__top {
   display: flex;
   justify-content: space-between;
@@ -52,52 +92,71 @@
   flex-wrap: wrap;
   gap: .25rem 1rem;
 }
-
+ 
 .rv-card__title {
-  font: 700 1.15rem var(--font-head);
+  font: 700 1.2rem / 1.2 var(--font-head);
 }
-
+ 
 .rv-meta {
   font-size: .9rem;
   color: #5d685f;
 }
-
+ 
 .rv-meta a {
   color: var(--leaf);
   font-weight: 700;
 }
-
+ 
 .rv-stars {
   font-size: 1.15rem;
   letter-spacing: .1em;
   white-space: nowrap;
+  color: #d08a00;
 }
-
+ 
 .rv-comment {
   margin-top: .6rem;
   max-width: 65ch;
   white-space: pre-line;
 }
-
+ 
 .rv-actions {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
   margin-top: 1rem;
 }
-
+ 
 .rv-actions--page {
   margin-top: 2rem;
 }
-
+ 
+/* Keadaan kosong: lingkaran lime berisi bintang, seperti halaman repair */
 .rv-empty {
-  padding: 1.25rem 1.5rem;
-  border: 2px dashed var(--line);
-  border-radius: 12px;
-  color: #5d685f;
+  display: grid;
+  justify-items: start;
+  gap: .25rem;
+  padding: 1.5rem 1.6rem;
+  background: rgba(255, 255, 255, .6);
+  border: 1px dashed rgba(20, 38, 28, .22);
+  border-radius: 20px;
+  color: #3f4c43;
 }
-
-/* Pesan sukses atau gagal */
+ 
+.rv-empty::before {
+  content: "★";
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-bottom: .4rem;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+ 
+/* ---------- Pesan ---------- */
 .rv-messages {
   list-style: none;
   margin: 0 0 1.5rem;
@@ -105,72 +164,104 @@
   display: grid;
   gap: .5rem;
 }
-
+ 
 .rv-message {
-  padding: .75rem 1rem;
+  padding: .85rem 1.1rem;
   background: #fff;
-  border: 2px solid var(--ink);
-  border-left: 8px solid var(--lime);
-  border-radius: 8px;
+  border: 1px solid rgba(20, 38, 28, .08);
+  border-left: 6px solid var(--leaf);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(20, 38, 28, .06);
 }
-
+ 
 .rv-message--error {
   border-left-color: var(--rust);
 }
-
-/* Form */
+ 
+/* ---------- Form ---------- */
 .rv-summary {
   display: flex;
   flex-direction: column;
   gap: .25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
-
-.rv-form textarea {
+ 
+.rv-form {
+  margin-top: 0;
+  padding: 1.75rem;
+  background: #fff;
+  border: 1px solid rgba(20, 38, 28, .08);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(20, 38, 28, .07);
+}
+ 
+.rv-form .field textarea {
   width: 100%;
   resize: vertical;
+  border: 1.5px solid #cfd8cf;
+  border-radius: 12px;
 }
-
+ 
+.rv-form .field textarea:focus-visible {
+  border-color: var(--leaf);
+}
+ 
 .rv-fieldset {
   margin: 0;
   padding: 0;
   border: 0;
 }
-
+ 
 .rv-fieldset legend {
   padding: 0;
-  margin-bottom: .5rem;
+  margin-bottom: .6rem;
   font-weight: 700;
 }
-
+ 
 .rv-rating {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
 }
-
+ 
 .rv-rating label {
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
-  padding: .5rem .9rem;
+  gap: .45rem;
+  padding: .55rem 1rem;
   background: #fff;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
+  border: 1.5px solid #cfd8cf;
+  border-radius: 999px;
   cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
 }
-
+ 
+.rv-rating label:hover {
+  border-color: var(--leaf);
+}
+ 
+.rv-rating input {
+  accent-color: var(--leaf);
+}
+ 
+/* Pilihan yang dipilih berwarna hijau seperti tombol utama */
 .rv-rating label:has(input:checked) {
-  background: var(--lime);
+  background: var(--leaf);
+  border-color: var(--leaf);
+  color: #fff;
   font-weight: 700;
 }
-
+ 
+.rv-rating label:has(input:checked) input {
+  accent-color: #fff;
+}
+ 
 .rv-rating label:has(input:focus-visible) {
   outline: 3px solid var(--rust);
   outline-offset: 2px;
 }
-
-/* Ringkasan rata-rata rating mitra */
+ 
+/* ---------- Ringkasan rata-rata rating mitra ---------- */
 .rv-average {
   display: flex;
   align-items: center;
@@ -178,8 +269,20 @@
   gap: .25rem 1rem;
   margin: 1.5rem 0 2rem;
 }
-
+ 
 .rv-average__value {
   font: 700 3rem / 1 var(--font-head);
   letter-spacing: -.03em;
+  color: var(--leaf);
+}
+ 
+@media (max-width: 560px) {
+  .rv-page { padding-top: 2.5rem; }
+  .rv-card { padding: 1.1rem 1.15rem; }
+  .rv-form { padding: 1.25rem; }
+  .rv-actions .btn { flex: 1 1 auto; text-align: center; }
+}
+ 
+@media (prefers-reduced-motion: reduce) {
+  .rv-rating label { transition: none; }
 }
