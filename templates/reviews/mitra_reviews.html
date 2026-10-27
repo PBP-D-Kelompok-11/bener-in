@@ -25,9 +25,16 @@
   </div>
 
   {% if reviews %}
+    <div class="rv-filter" role="group" aria-label="Filter berdasarkan rating" data-rating-filter>
+      <button type="button" class="rv-chip" data-rating="all" aria-pressed="true">Semua</button>
+      {% for n in "54321" %}
+        <button type="button" class="rv-chip" data-rating="{{ n }}" aria-pressed="false">{{ n }} ★</button>
+      {% endfor %}
+    </div>
+    <p class="rv-meta rv-filter__count" data-filter-count aria-live="polite"></p>
     <ul class="rv-list">
       {% for review in reviews %}
-        <li class="rv-card">
+        <li class="rv-card" data-review-item data-rating="{{ review.rating }}">
           <div class="rv-card__top">
             <span class="rv-card__title">{{ review.repair_request.customer.get_short_name }}</span>
             <span class="rv-stars" role="img" aria-label="Rating {{ review.rating }} dari 5">{{ review.stars }}</span>
@@ -37,6 +44,8 @@
         </li>
       {% endfor %}
     </ul>
+    <p class="rv-empty" data-filter-empty hidden>Tidak ada review dengan rating ini.</p>
+    <script src="{% static 'js/reviews.js' %}" defer></script>
   {% endif %}
 </main>
 {% endblock content %}

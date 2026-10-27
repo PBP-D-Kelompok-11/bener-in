@@ -286,3 +286,88 @@ body:has(.rv-page) {
 @media (prefers-reduced-motion: reduce) {
   .rv-rating label { transition: none; }
 }
+
+.rv-page [hidden] { display: none !important; }
+ 
+/* Hapus dengan konfirmasi di tempat */
+.btn.rv-confirm,
+.btn.rv-confirm:hover,
+.btn.rv-confirm:focus-visible {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: #fff;
+}
+ 
+.rv-card {
+  transition: opacity .3s, transform .3s;
+}
+ 
+.rv-card--removing {
+  opacity: 0;
+  transform: translateX(24px);
+}
+ 
+/* Pratinjau bintang dan penghitung karakter di form */
+.rv-stars-preview {
+  margin-top: .75rem;
+  min-height: 1.5em;
+  font-weight: 700;
+  color: #d08a00;
+}
+ 
+.rv-counter {
+  margin-top: .35rem;
+  text-align: right;
+}
+ 
+.rv-counter--warn {
+  color: var(--rust);
+  font-weight: 700;
+}
+ 
+/* Filter rating di halaman review mitra */
+.rv-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+ 
+.rv-chip {
+  min-height: 44px;
+  padding: .45rem 1.1rem;
+  background: #fff;
+  border: 1.5px solid #cfd8cf;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+ 
+.rv-chip:hover {
+  border-color: var(--leaf);
+}
+ 
+.rv-chip[aria-pressed="true"] {
+  background: var(--leaf);
+  border-color: var(--leaf);
+  color: #fff;
+  font-weight: 700;
+}
+ 
+.rv-chip:focus-visible {
+  outline: 3px solid var(--rust);
+  outline-offset: 2px;
+}
+ 
+.rv-filter__count {
+  margin: .75rem 0 1rem;
+}
+ 
+@media (max-width: 560px) {
+  .rv-chip { flex: 1 1 calc(33% - .5rem); text-align: center; }
+  .rv-actions .btn { min-height: 44px; }
+}
+ 
+@media (prefers-reduced-motion: reduce) {
+  .rv-card, .rv-chip { transition: none; }
+}
