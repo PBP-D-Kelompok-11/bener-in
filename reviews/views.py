@@ -5,7 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from authentication.models import MitraReparasi
 from repair.models import RepairRequest
@@ -116,7 +118,19 @@ def review_delete(request, pk):
         pk=pk, repair_request__customer=request.user,
     )
     if request.method == 'POST':
+        repair = review.repair_request
         review.delete()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Dipanggil lewat fetch dari halaman "Review saya": balas JSON.
+            return JsonResponse({
+                'ok': True,
+                'message': 'Review kamu sudah dihapus.',
+                'pending': {
+                    'item': repair.item_name,
+                    'mitra': repair.mitra.nama_usaha,
+                    'url': reverse('reviews:create', args=[repair.pk]),
+                },
+            })
         messages.success(request, 'Review kamu sudah dihapus.')
         return redirect('reviews:mine')
     return render(request, 'reviews/review_confirm_delete.html', {'review': review})

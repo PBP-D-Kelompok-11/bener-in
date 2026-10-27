@@ -20,7 +20,7 @@ class ImpactSummaryTests(SimpleTestCase):
 
     def test_progress_between_badges(self):
         summary = get_impact_summary(7)
-        self.assertEqual(summary['current_badge']['name'], 'Penyelamat Barang')
+        self.assertEqual(summary['current_badge']['name'], 'Anti-Buang Club')
         self.assertEqual(summary['progress_percent'], 40)
         self.assertEqual(summary['remaining'], 3)
 
@@ -139,6 +139,30 @@ class ReviewFlowTests(ReviewTestBase):
         self.assertEqual(review.rating, 2)
         self.client.post(reverse('reviews:delete', args=[review.pk]))
         self.assertFalse(Review.objects.exists())
+
+    def test_ajax_delete_returns_json(self):
+        repair = self.make_repair()
+        review = Review.objects.create(repair_request=repair, rating=4)
+        self.login_customer()
+        response = self.client.post(
+            reverse('reviews:delete', args=[review.pk]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['pending']['url'], reverse('reviews:create', args=[repair.pk]))
+        self.assertFalse(Review.objects.exists())
+
+    def test_ajax_delete_by_other_customer_is_404(self):
+        review = Review.objects.create(repair_request=self.make_repair(), rating=4)
+        self.login_customer(self.other)
+        response = self.client.post(
+            reverse('reviews:delete', args=[review.pk]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Review.objects.exists())
 
     def test_other_customer_cannot_edit_or_delete(self):
         repair = self.make_repair()

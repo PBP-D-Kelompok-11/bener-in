@@ -10,14 +10,15 @@
 {% endblock meta %}
 
 {% block content %}
-<main class="rv-page">
+<main class="rv-page" data-csrf="{{ csrf_token }}">
   <p class="rv-eyebrow">Ruang reviewmu</p>
   <h1 class="rv-title">Review <em>saya</em></h1>
   <p class="rv-lead">Nilai mitra setelah barangmu selesai diperbaiki. Review membantu customer lain memilih mitra yang tepat.</p>
 
-  {% include 'reviews/_messages.html' %}
+  <div data-flash aria-live="polite">{% include 'reviews/_messages.html' %}</div>
 
   <h2 class="rv-heading">Menunggu review</h2>
+  <div id="rv-pending">
   {% if pending %}
     <ul class="rv-list">
       {% for repair in pending %}
@@ -35,8 +36,10 @@
   {% else %}
     <p class="rv-empty">Tidak ada repair yang menunggu review. Review bisa ditulis setelah mitra mengubah status repair menjadi Completed.</p>
   {% endif %}
+  </div>
 
   <h2 class="rv-heading">Review yang sudah kamu tulis</h2>
+  <div id="rv-reviews">
   {% if reviews %}
     <ul class="rv-list">
       {% for review in reviews %}
@@ -52,7 +55,7 @@
           {% if review.comment %}<p class="rv-comment">{{ review.comment }}</p>{% endif %}
           <div class="rv-actions">
             <a href="{% url 'reviews:edit' review.pk %}" class="btn btn-outline">Ubah</a>
-            <a href="{% url 'reviews:delete' review.pk %}" class="btn btn-ghost">Hapus</a>
+            <a href="{% url 'reviews:delete' review.pk %}" class="btn btn-ghost" data-ajax-delete>Hapus</a>
           </div>
         </li>
       {% endfor %}
@@ -60,9 +63,11 @@
   {% else %}
     <p class="rv-empty">Kamu belum menulis review.</p>
   {% endif %}
+  </div>
 
   <div class="rv-actions rv-actions--page">
     <a href="{% url 'reviews:impact' %}" class="btn btn-outline">Lihat impact tracker</a>
   </div>
 </main>
+<script src="{% static 'js/reviews.js' %}" defer></script>
 {% endblock content %}
