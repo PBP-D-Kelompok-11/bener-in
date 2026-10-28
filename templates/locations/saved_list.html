@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/locations.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Tempat tersimpan — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="loc-page" data-saved-page data-csrf="{{ csrf_token }}">
+  <h1 class="loc-title">Tempat tersimpan</h1>
+  <p class="loc-lead">Daftar tempat reparasi yang kamu simpan dari peta. Tambahkan catatan supaya mudah diingat.</p>
+
+  {% if messages %}
+    <ul class="loc-messages" aria-live="polite">
+      {% for message in messages %}<li class="loc-message{% if message.tags == 'error' %} loc-message--error{% endif %}">{{ message }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="get" class="loc-filter" role="search" aria-label="Saring tempat tersimpan">
+    <div class="field">
+      <label for="f-q">Cari</label>
+      <input id="f-q" name="q" type="search" value="{{ q }}" maxlength="80" placeholder="Nama, alamat, atau catatan">
+    </div>
+    <div class="field">
+      <label for="f-category">Kategori</label>
+      <select id="f-category" name="category">
+        <option value="">Semua kategori</option>
+        {% for value, label in categories %}<option value="{{ value }}"{% if value == category %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-status">Status</label>
+      <select id="f-status" name="status">
+        <option value="">Semua status</option>
+        {% for value, label in statuses %}<option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-solid">Terapkan</button>
+    {% if filtered %}<a href="{% url 'locations:saved' %}" class="btn btn-ghost">Reset</a>{% endif %}
+  </form>
+
+  <p class="loc-meta" data-count aria-live="polite">{{ items|length }} tempat</p>
+  <ul class="loc-list" data-saved-list>
+    {% for saved in items %}{% include 'locations/_saved_item.html' %}{% endfor %}
+  </ul>
+  <p class="loc-empty" data-empty{% if items %} hidden{% endif %}>
+    {% if filtered %}Tidak ada tempat yang cocok dengan penyaringan. <a href="{% url 'locations:saved' %}">Reset penyaringan</a>.
+    {% else %}Belum ada tempat tersimpan. <a href="{% url 'locations:discover' %}">Cari tempat reparasi di peta</a> lalu tekan “Simpan”.{% endif %}
+  </p>
+
+  <div class="loc-toast" data-toast role="status" aria-live="polite" hidden></div>
+</main>
+<script src="{% static 'js/locations.js' %}" defer></script>
+{% endblock content %}

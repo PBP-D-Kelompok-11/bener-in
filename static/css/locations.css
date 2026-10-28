@@ -1,0 +1,97 @@
+/* Modul D: Repair Location & Discovery.*/
+
+.loc-page { max-width: 1100px; margin: 0 auto; padding: 3.5rem 5vw 5rem; }
+.loc-page--narrow { max-width: 680px; }
+
+.loc-title { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: .75rem; }
+.loc-lead { max-width: 62ch; margin-bottom: 1.75rem; }
+.loc-heading { font-size: 1.15rem; margin-bottom: .75rem; }
+.loc-meta { color: rgba(20, 38, 28, .72); font-size: .92rem; }
+.loc-note, .loc-note-text { font-size: .9rem; margin-top: 1rem; max-width: 70ch; }
+.loc-note-text { margin-top: .5rem; padding-left: .75rem; border-left: 3px solid var(--lime); }
+
+/* ---------- Filter ---------- */
+.loc-filter {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem;
+  margin-bottom: 1rem; padding: 1.1rem 1.25rem;
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+}
+.loc-filter .field { flex: 1 1 200px; margin: 0; }
+.loc-filter select, .loc-filter input[type="search"] {
+  width: 100%; padding: .55rem .7rem; font: inherit; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--line); border-radius: 8px;
+}
+.loc-check { display: flex; align-items: center; gap: .5rem; font-weight: 500; }
+
+.loc-status {
+  margin-bottom: 1rem; padding: .55rem .9rem; border-radius: 8px;
+  background: #fff; border-left: 5px solid var(--line); font-size: .95rem;
+}
+.loc-status[data-state="loading"] { border-left-color: var(--lime); }
+.loc-status[data-state="success"] { border-left-color: var(--leaf); }
+.loc-status[data-state="error"] { border-left-color: var(--rust); color: var(--rust); font-weight: 700; }
+
+/* ---------- Peta + hasil ---------- */
+.loc-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 1.25rem; align-items: start; }
+.loc-map { height: 520px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #e8ecde; }
+.loc-results { max-height: 520px; overflow-y: auto; }
+.loc-result-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.loc-result-list button {
+  display: block; width: 100%; text-align: left; padding: .6rem .8rem; cursor: pointer;
+  font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 10px;
+  border-left: 5px solid var(--ink);
+}
+.loc-result-list li[data-kind="mitra"] button { border-left-color: var(--leaf); }
+.loc-result-list button:hover { background: var(--paper); }
+.loc-result-list span { display: block; font-size: .85rem; color: rgba(20, 38, 28, .72); }
+.loc-popup { display: grid; gap: .3rem; min-width: 190px; }
+.loc-popup .btn { padding: .35rem .7rem; font-size: .88rem; text-align: center; }
+.loc-popup button.btn { cursor: pointer; font-family: inherit; }
+.loc-popup button.btn:disabled { opacity: .65; cursor: default; }
+
+/* ---------- Kartu tempat tersimpan ---------- */
+.loc-list { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: 1rem; }
+.loc-card {
+  background: #fff; border: 1px solid rgba(20, 38, 28, .08); border-radius: 20px;
+  padding: 1.25rem 1.5rem; box-shadow: 0 10px 30px rgba(20, 38, 28, .07);
+}
+.loc-card--accent { box-shadow: 0 10px 30px rgba(20, 38, 28, .07), inset 5px 0 0 var(--lime); margin-bottom: 1rem; }
+.loc-card__top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; }
+.loc-card__title { font: 700 1.15rem var(--font-head); color: var(--ink); }
+a.loc-card__title { text-decoration: none; }
+a.loc-card__title:hover { color: var(--leaf); text-decoration: underline; }
+.loc-badge { padding: .15rem .65rem; border-radius: 999px; font-size: .82rem; font-weight: 700; background: var(--lime); }
+.loc-badge--visited { background: var(--leaf); color: #fff; }
+.loc-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.loc-actions form { margin: 0; }
+.loc-actions button.btn { cursor: pointer; }
+
+.loc-empty { margin-top: 1rem; padding: 1rem 1.25rem; background: #fff; border: 1px dashed var(--line); border-radius: 12px; }
+.loc-empty[hidden], .loc-toast[hidden] { display: none; }
+
+.loc-messages { list-style: none; margin: 0 0 1rem; padding: 0; }
+.loc-message { padding: .6rem .9rem; background: #fff; border-left: 5px solid var(--leaf); border-radius: 8px; }
+.loc-message--error { border-left-color: var(--rust); color: var(--rust); font-weight: 700; }
+
+/* ---------- Toast ---------- */
+.loc-toast {
+  position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 1000;
+  display: flex; align-items: center; gap: 1rem; max-width: min(92vw, 520px);
+  padding: .75rem 1rem; background: var(--ink); color: var(--paper); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 38, 28, .3);
+}
+.loc-toast[data-state="error"] { background: var(--rust); }
+.loc-toast button {
+  cursor: pointer; font: 700 .95rem var(--font-body); color: var(--lime);
+  background: none; border: 0; text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .loc-layout { grid-template-columns: 1fr; }
+  .loc-map { height: 380px; }
+  .loc-results { max-height: none; }
+}
+@media (max-width: 600px) {
+  .loc-card { padding: 1.1rem 1.15rem; }
+  .loc-actions .btn { flex: 1 1 auto; text-align: center; }
+}

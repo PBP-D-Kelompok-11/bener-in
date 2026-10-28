@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'reviews', 
     'mitra',
     'repair',
+    'locations',
 ]
 
 MIDDLEWARE = [
@@ -115,6 +116,7 @@ AUTHENTICATION_BACKENDS = [
     'authentication.backends.MitraBackend',
 ]
 LOGIN_URL = 'authentication:login'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 

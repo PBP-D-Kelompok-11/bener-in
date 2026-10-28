@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/locations.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Ubah tempat tersimpan — bener.in</title>
+{% endblock meta %}
+
+{% block content %}
+<main class="loc-page loc-page--narrow">
+  <h1 class="loc-title">Ubah tempat tersimpan</h1>
+
+  <div class="loc-card loc-card--accent">
+    <span class="loc-card__title">{{ saved.place.name }}</span>
+    <p class="loc-meta">{{ saved.place.get_category_display }}{% if saved.place.address %} · {{ saved.place.address }}{% endif %}</p>
+  </div>
+
+  <form method="post" class="auth-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    <div class="field">
+      <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+      {{ form.status }}
+      {{ form.status.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+      {{ form.note }}
+      {{ form.note.errors }}
+    </div>
+    <div class="loc-actions">
+      <button type="submit" class="btn btn-solid">Simpan perubahan</button>
+      <a href="{% url 'locations:saved' %}" class="btn btn-ghost">Batal</a>
+    </div>
+  </form>
+</main>
+{% endblock content %}
