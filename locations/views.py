@@ -154,6 +154,15 @@ def saved_edit(request, pk):
 
 
 @customer_required
+def toggle(request, pk):
+    obj = get_object_or_404(SavedPlace, pk=pk)
+    if obj.Status == 'visited'or obj.Status == 'Sudah dikunjungi':
+        return obj.STATUS == 'want' or 'Ingin dikunjungi'
+    else:
+        return obj.STATUS == "WANT"
+
+
+@customer_required
 @require_POST
 def saved_delete(request, pk):
     saved = _owned_or_403(request, pk)
