@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from django.conf import settings
 from django.core.cache import cache
 
-from authentication.models import MitraReparasi
-from .models import RepairPlace
+from authentication.models import KategoriBarang, MitraReparasi
+from .models import MITRA_SOURCE, RepairPlace
 
 CATEGORY_TAGS = {
     'gadget': [('shop', 'mobile_phone'), ('shop', 'computer'), ('craft', 'electronics_repair'), ('shop', 'electronics_repair')],
@@ -43,9 +43,21 @@ CACHE_TTL = 60 * 60      # hasil segar: 1 jam
 STALE_TTL = 60 * 60 * 24 * 7  # cadangan kalau Overpass mati: 7 hari
 USER_AGENT = 'bener.in-student-project/1.0 (PBP UI)'
 
+NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse'
+REVERSE_TIMEOUT = 10             # detik
+REVERSE_TTL = 60 * 60 * 24 * 7   # alamat suatu titik jarang berubah: 7 hari
+
 
 class OverpassUnavailable(Exception):
     """Semua endpoint Overpass gagal dan tidak ada data cadangan."""
+
+
+class GeocodeUnavailable(Exception):
+    """Nominatim tidak dapat dihubungi dan titik ini belum ada di cache."""
+
+
+class AddressNotFound(Exception):
+    """Nominatim tidak menemukan alamat untuk titik ini (mis. di laut)."""
 
 
 @dataclass
@@ -207,3 +219,95 @@ def nearby_mitra(lat, lng, radius_km, category=None, limit=50):
             found.append((distance, mitra))
     found.sort(key=lambda pair: pair[0])
     return found[:limit]
+
+
+def place_for_mitra(mitra):
+    """RepairPlace "cermin" untuk mitra bener.in, dibuat/diperbarui saat disimpan.
+
+    Dengan begitu mitra bisa masuk ke daftar tempat tersimpan lewat SavedPlace
+    yang sama seperti tempat OSM. Datanya disalin ulang setiap kali ada yang
+    menyimpan, jadi tidak tertinggal jauh dari profil mitra. Kategori dipilih
+    tetap (layanan pertama yang valid) karena baris ini dipakai bersama semua
+    customer.
+    """
+    category = next((c for c in (mitra.layanan or []) if c in KategoriBarang.values),
+                    KategoriBarang.LAINNYA.value)
+    place, _ = RepairPlace.objects.update_or_create(
+        osm_type=MITRA_SOURCE, osm_id=mitra.pk,
+        defaults={
+            'name': _clip(mitra.nama_usaha, 255) or 'Mitra bener.in',
+            'category': category,
+            'latitude': mitra.latitude,
+            'longitude': mitra.longitude,
+            'address': _clip(' '.join((mitra.alamat or '').split()), 255),
+            'phone': _clip(mitra.no_hp, 60),
+        },
+    )
+    return place
+
+
+def _first(address, *keys):
+    return next((address[k] for k in keys if address.get(k)), '')
+
+
+def format_address(data):
+    """Susun alamat ringkas dari jawaban Nominatim (tanpa negara)."""
+    address = data.get('address') or {}
+    street = ' '.join(filter(None, [
+        _first(address, 'road', 'pedestrian', 'footway', 'path'),
+        address.get('house_number'),
+    ]))
+    parts = [
+        street,
+        _first(address, 'neighbourhood', 'quarter', 'hamlet'),
+        _first(address, 'suburb', 'village'),
+        _first(address, 'city_district', 'subdistrict'),
+        _first(address, 'city', 'town', 'municipality', 'county'),
+        _first(address, 'state'),
+        _first(address, 'postcode'),
+    ]
+    seen, ordered = set(), []
+    for part in (p.strip() for p in parts):
+        if part and part.lower() not in seen:
+            seen.add(part.lower())
+            ordered.append(part)
+    return _clip(', '.join(ordered) or data.get('display_name'), 500)
+
+
+def _http_get_json(url):
+    """Satu-satunya titik reverse geocoding yang menyentuh jaringan."""
+    request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+    with urllib.request.urlopen(request, timeout=REVERSE_TIMEOUT) as response:
+        return json.loads(response.read().decode('utf-8'))
+
+
+def reverse_geocode(lat, lng):
+    """Alamat teks untuk sebuah titik peta (Nominatim, di-cache per ~11 m)."""
+    try:
+        lat, lng = float(lat), float(lng)
+    except (TypeError, ValueError):
+        raise ValueError('Koordinat tidak valid.')
+    if not (math.isfinite(lat) and math.isfinite(lng)
+            and -90 <= lat <= 90 and -180 <= lng <= 180):
+        raise ValueError('Koordinat tidak valid.')
+
+    key = f'reverse:{lat:.4f}:{lng:.4f}'
+    address = cache.get(key)
+    if address is not None:
+        return address
+
+    query = urllib.parse.urlencode({
+        'format': 'jsonv2', 'lat': f'{lat:.6f}', 'lon': f'{lng:.6f}',
+        'zoom': 18, 'addressdetails': 1, 'accept-language': 'id',
+    })
+    try:
+        data = _http_get_json(f'{NOMINATIM_URL}?{query}')
+    except (urllib.error.URLError, OSError, ValueError):
+        raise GeocodeUnavailable('Layanan alamat OpenStreetMap sedang tidak dapat dihubungi.')
+    if not isinstance(data, dict) or data.get('error'):
+        raise AddressNotFound('Tidak ada alamat di titik ini.')
+    address = format_address(data)
+    if not address:
+        raise AddressNotFound('Tidak ada alamat di titik ini.')
+    cache.set(key, address, REVERSE_TTL)
+    return address

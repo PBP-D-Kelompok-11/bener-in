@@ -7,23 +7,30 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from authentication.models import KategoriBarang
+from authentication.models import KategoriBarang, MitraReparasi
 
 from .decorators import customer_required, is_ajax
 from .forms import SavedPlaceForm
-from .models import RepairPlace, SavedPlace
+from .models import MITRA_SOURCE, RepairPlace, SavedPlace
+from .services import place_for_mitra
 
 
 def discover(request):
     """Halaman peta pencarian. Terbuka untuk umum; menyimpan butuh login."""
-    saved_ids = []
+    saved_ids, saved_mitra_ids = [], []
     if getattr(request.user, 'role', None) == 'customer':
+        mine = SavedPlace.objects.filter(customer=request.user)
+        # Tempat OSM dikenali lewat pk RepairPlace, mitra lewat pk akun mitra.
         saved_ids = list(
-            SavedPlace.objects.filter(customer=request.user).values_list('place_id', flat=True)
+            mine.exclude(place__osm_type=MITRA_SOURCE).values_list('place_id', flat=True)
+        )
+        saved_mitra_ids = list(
+            mine.filter(place__osm_type=MITRA_SOURCE).values_list('place__osm_id', flat=True)
         )
     return render(request, 'locations/discover.html', {
         'categories': KategoriBarang.choices,
         'saved_ids': saved_ids,
+        'saved_mitra_ids': saved_mitra_ids,
         'is_customer': getattr(request.user, 'role', None) == 'customer',
     })
 
@@ -84,17 +91,35 @@ def _respond(request, ok, message, status=200, **extra):
     return redirect('locations:saved')
 
 
+def _find_target(request):
+    """Yang mau disimpan: `mitra_id` (mitra bener.in) atau `place_id` (tempat OSM).
+
+    Hanya membaca database; None jika tidak ditemukan.
+    """
+    if request.POST.get('mitra_id'):
+        try:
+            return MitraReparasi.objects.get(pk=int(request.POST['mitra_id']), is_active=True)
+        except (ValueError, MitraReparasi.DoesNotExist):
+            return None
+    try:
+        return RepairPlace.objects.get(pk=int(request.POST.get('place_id', '')))
+    except (ValueError, RepairPlace.DoesNotExist):
+        return None
+
+
 @customer_required
 @require_POST
 def saved_create(request):
-    try:
-        place = RepairPlace.objects.get(pk=int(request.POST.get('place_id', '')))
-    except (ValueError, RepairPlace.DoesNotExist):
+    target = _find_target(request)
+    if target is None:
         return _respond(request, False, 'Tempat tidak ditemukan.', 404)
 
     form = SavedPlaceForm(request.POST)
     if not form.is_valid():
         return _respond(request, False, 'Data tidak valid.', 400, errors=form.errors.get_json_data())
+
+    # Cermin RepairPlace untuk mitra baru dibuat setelah input lolos validasi.
+    place = place_for_mitra(target) if isinstance(target, MitraReparasi) else target
 
     existing = SavedPlace.all_objects.filter(customer=request.user, place=place).first()
     if existing and not existing.is_deleted:

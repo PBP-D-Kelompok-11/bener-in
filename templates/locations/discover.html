@@ -58,6 +58,7 @@
 
   <div class="loc-toast" data-toast role="status" aria-live="polite" hidden></div>
   {{ saved_ids|json_script:"loc-saved-ids" }}
+  {{ saved_mitra_ids|json_script:"loc-saved-mitra-ids" }}
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="{% static 'js/locations.js' %}" defer></script>

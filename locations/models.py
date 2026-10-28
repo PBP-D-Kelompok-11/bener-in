@@ -1,8 +1,14 @@
 from django.conf import settings
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 from authentication.models import KategoriBarang
+
+# Nilai `osm_type` untuk baris RepairPlace yang merupakan "cermin" dari mitra
+# terdaftar bener.in (osm_id = pk mitra). Dipakai supaya mitra bisa disimpan
+# lewat SavedPlace yang sama tanpa mengubah skema database.
+MITRA_SOURCE = 'mitra'
 
 
 class RepairPlace(models.Model):
@@ -10,7 +16,7 @@ class RepairPlace(models.Model):
 
     Tabel ini berfungsi sebagai cache/direktori lokal: diisi saat pengguna
     mencari di peta atau lewat `manage.py seed_repair_places`. Pengguna tidak
-    mengubahnya langsung; yang di-CRUD pengguna adalah `SavedPlace`.
+    mengubahnya langsung, yang di-CRUD pengguna adalah `SavedPlace`.
     """
 
     osm_type = models.CharField(max_length=10)  # node / way / relation
@@ -41,6 +47,17 @@ class RepairPlace(models.Model):
     @property
     def osm_url(self):
         return f'https://www.openstreetmap.org/{self.osm_type}/{self.osm_id}'
+
+    @property
+    def is_mitra(self):
+        return self.osm_type == MITRA_SOURCE
+
+    @property
+    def detail_url(self):
+        """Tautan detail: halaman review untuk mitra, halaman OSM untuk lainnya."""
+        if self.is_mitra:
+            return reverse('reviews:mitra', args=[self.osm_id])
+        return self.osm_url
 
 
 class ActiveSavedPlaceManager(models.Manager):

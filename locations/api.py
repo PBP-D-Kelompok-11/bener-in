@@ -1,10 +1,11 @@
-"""Endpoint JSON untuk peta: proxy Overpass dan mitra terdekat."""
+"""Endpoint JSON untuk peta: proxy Overpass, mitra terdekat, dan alamat dari titik."""
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.http import require_GET
 
 from .ratelimit import rate_limit
-from .services import OverpassUnavailable, nearby_mitra, search_places
+from .services import (AddressNotFound, GeocodeUnavailable, OverpassUnavailable,
+                       nearby_mitra, reverse_geocode, search_places)
 
 
 def _error(message, status):
@@ -85,3 +86,23 @@ def mitra_api(request):
             'reviews_url': reverse('reviews:mitra', args=[m.pk]),
         } for distance, m in found],
     })
+
+
+@require_GET
+@rate_limit('reverse', limit=20, window=60)
+def reverse_api(request):
+    """Alamat teks dari titik peta, dipakai form pendaftaran mitra.
+
+    Terbuka untuk umum (pendaftar belum login) dan dibatasi lajunya karena
+    meneruskan ke Nominatim yang punya aturan pemakaian wajar.
+    """
+    g = request.GET
+    try:
+        address = reverse_geocode(g.get('lat'), g.get('lng'))
+    except ValueError as exc:
+        return _error(str(exc), 400)
+    except AddressNotFound as exc:
+        return _error(str(exc), 404)
+    except GeocodeUnavailable as exc:
+        return _error(str(exc), 503)
+    return JsonResponse({'ok': True, 'address': address})

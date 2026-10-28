@@ -1,6 +1,6 @@
 from django.urls import reverse
 
-from locations.models import SavedPlace
+from locations.models import RepairPlace, SavedPlace
 
 from .base import (AJAX, LocationsTestCase, make_customer, make_mitra, make_place,
                    make_saved)
@@ -292,3 +292,86 @@ class SavedDeleteRestoreTests(LocationsTestCase):
         self.login_customer(self.customer)
         url = reverse('locations:saved_restore', args=[9999])
         self.assertEqual(self.client.post(url, **AJAX).status_code, 404)
+
+
+
+class SaveMitraTests(LocationsTestCase):
+    """Mitra bener.in (penanda hijau di peta) bisa disimpan seperti tempat OSM."""
+
+    def setUp(self):
+        super().setUp()
+        self.customer = make_customer()
+        self.mitra = make_mitra()
+        self.login_customer(self.customer)
+        self.url = reverse('locations:saved_create')
+
+    def post(self, data=None, **extra):
+        data = {'mitra_id': self.mitra.pk, 'status': 'want', **(data or {})}
+        return self.client.post(self.url, data, **AJAX, **extra)
+
+    def test_save_mitra_creates_mirror_and_saved_place(self):
+        response = self.post({'note': 'dekat rumah'})
+        self.assertEqual(response.status_code, 201)
+        saved = SavedPlace.objects.get()
+        self.assertEqual(saved.customer, self.customer)
+        self.assertEqual((saved.place.osm_type, saved.place.osm_id), ('mitra', self.mitra.pk))
+        self.assertEqual(saved.note, 'dekat rumah')
+        self.assertEqual(response.json()['saved']['id'], saved.pk)
+
+    def test_two_customers_share_one_mirror_row(self):
+        self.post()
+        self.client.logout()
+        self.login_customer(make_customer('siti'))
+        self.assertEqual(self.post().status_code, 201)
+        self.assertEqual(SavedPlace.objects.count(), 2)
+        self.assertEqual(RepairPlace.objects.filter(osm_type='mitra').count(), 1)
+
+    def test_saving_twice_is_idempotent(self):
+        self.post()
+        self.assertEqual(self.post().status_code, 200)
+        self.assertEqual(SavedPlace.objects.count(), 1)
+
+    def test_unknown_bad_or_inactive_mitra_is_404_and_creates_nothing(self):
+        inactive = make_mitra('tutup', active=False)
+        for value in ('9999', 'abc', inactive.pk):
+            self.assertEqual(self.post({'mitra_id': value}).status_code, 404, value)
+        self.assertEqual(RepairPlace.objects.count(), 0)
+        self.assertEqual(SavedPlace.objects.count(), 0)
+
+    def test_invalid_form_does_not_create_mirror_row(self):
+        self.assertEqual(self.post({'status': 'xx'}).status_code, 400)
+        self.assertEqual(RepairPlace.objects.count(), 0)
+
+    def test_mitra_account_cannot_save(self):
+        self.client.logout()
+        self.login_mitra(self.mitra)
+        self.assertEqual(self.post().status_code, 403)
+
+    def test_osm_place_id_still_works(self):
+        place = make_place()
+        response = self.client.post(self.url, {'place_id': place.pk, 'status': 'want'}, **AJAX)
+        self.assertEqual(response.status_code, 201)
+
+    def test_discover_separates_osm_and_mitra_ids(self):
+        osm = make_place()
+        make_saved(self.customer, osm)
+        self.post()
+        response = self.client.get(reverse('locations:discover'))
+        self.assertEqual(response.context['saved_ids'], [osm.pk])
+        self.assertEqual(response.context['saved_mitra_ids'], [self.mitra.pk])
+        self.assertContains(response, 'id="loc-saved-mitra-ids"')
+
+    def test_saved_list_shows_mitra_with_link_to_reviews(self):
+        self.post()
+        response = self.client.get(reverse('locations:saved'))
+        self.assertContains(response, 'Usaha bengkel')
+        self.assertContains(response, 'Mitra bener.in')
+        self.assertContains(response, reverse('reviews:mitra', args=[self.mitra.pk]))
+        self.assertNotContains(response, 'openstreetmap.org/mitra')
+
+    def test_saved_mitra_can_be_deleted_and_restored(self):
+        saved_id = self.post().json()['saved']['id']
+        self.client.post(reverse('locations:saved_delete', args=[saved_id]), **AJAX)
+        self.assertEqual(SavedPlace.objects.count(), 0)
+        self.client.post(reverse('locations:saved_restore', args=[saved_id]), **AJAX)
+        self.assertEqual(SavedPlace.objects.count(), 1)

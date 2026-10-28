@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.urls import reverse
 
-from locations.services import OverpassUnavailable
+from locations.services import AddressNotFound, GeocodeUnavailable, OverpassUnavailable
 
 from .base import LocationsTestCase, make_customer, make_mitra
 
@@ -132,3 +132,45 @@ class MitraApiTests(LocationsTestCase):
         self.assertEqual(self.get(radius_km=500).status_code, 400)
         self.assertEqual(self.get(category='roket').status_code, 400)
         self.assertEqual(self.get(lat=95).status_code, 400)
+
+
+class ReverseApiTests(LocationsTestCase):
+    url = reverse('locations:api_reverse')
+
+    def get(self, **params):
+        return self.client.get(self.url, {'lat': -6.2, 'lng': 106.8, **params})
+
+    def test_anonymous_gets_address(self):
+        with mock.patch('locations.api.reverse_geocode', return_value='Jl. Melati 5, Depok') as geocode:
+            response = self.get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'ok': True, 'address': 'Jl. Melati 5, Depok'})
+        geocode.assert_called_once_with('-6.2', '106.8')
+
+    def test_bad_coordinates_are_400(self):
+        for params in ({'lat': 'abc'}, {'lat': 95}, {'lng': 'nan'}):
+            response = self.get(**params)
+            self.assertEqual(response.status_code, 400, params)
+            self.assertFalse(response.json()['ok'])
+
+    def test_missing_coordinates_are_400(self):
+        self.assertEqual(self.client.get(self.url).status_code, 400)
+
+    def test_no_address_is_404(self):
+        with mock.patch('locations.api.reverse_geocode', side_effect=AddressNotFound('kosong')):
+            response = self.get()
+        self.assertEqual((response.status_code, response.json()['message']), (404, 'kosong'))
+
+    def test_nominatim_down_is_503(self):
+        with mock.patch('locations.api.reverse_geocode', side_effect=GeocodeUnavailable('mati')):
+            response = self.get()
+        self.assertEqual((response.status_code, response.json()['message']), (503, 'mati'))
+
+    def test_only_get_allowed(self):
+        self.assertEqual(self.client.post(self.url).status_code, 405)
+
+    def test_rate_limited_after_20_requests_per_minute(self):
+        with mock.patch('locations.api.reverse_geocode', return_value='x'):
+            codes = [self.get().status_code for _ in range(21)]
+        self.assertEqual(codes[:20], [200] * 20)
+        self.assertEqual(codes[20], 429)

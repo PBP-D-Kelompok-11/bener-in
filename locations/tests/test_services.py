@@ -223,3 +223,113 @@ class NearbyMitraTests(LocationsTestCase):
                              ((0, 0, 5), {'category': 'roket'})]:
             with self.assertRaises(ValueError):
                 services.nearby_mitra(*args, **kwargs)
+
+
+
+NOMINATIM = {
+    'display_name': 'Jalan Melati 5, Beji, Depok, Jawa Barat, 16424, Indonesia',
+    'address': {
+        'road': 'Jalan Melati', 'house_number': '5', 'suburb': 'Beji',
+        'city_district': 'Beji', 'city': 'Depok', 'state': 'Jawa Barat',
+        'postcode': '16424', 'country': 'Indonesia',
+    },
+}
+
+
+def nominatim(data=NOMINATIM):
+    return mock.patch('locations.services._http_get_json', return_value=data)
+
+
+class FormatAddressTests(SimpleTestCase):
+    def test_orders_parts_and_skips_country_and_duplicates(self):
+        self.assertEqual(
+            services.format_address(NOMINATIM),
+            'Jalan Melati 5, Beji, Depok, Jawa Barat, 16424',
+        )
+
+    def test_falls_back_to_alternative_keys(self):
+        data = {'address': {'pedestrian': 'Gang Kecil', 'village': 'Sukamaju', 'town': 'Cibinong'}}
+        self.assertEqual(services.format_address(data), 'Gang Kecil, Sukamaju, Cibinong')
+
+    def test_falls_back_to_display_name(self):
+        self.assertEqual(services.format_address({'display_name': 'Suatu tempat'}), 'Suatu tempat')
+
+    def test_empty_when_nothing_known(self):
+        self.assertEqual(services.format_address({}), '')
+
+
+class ReverseGeocodeTests(LocationsTestCase):
+    def test_returns_formatted_address_and_asks_nominatim_in_indonesian(self):
+        with nominatim() as fetch:
+            address = services.reverse_geocode('-6.2', '106.8')
+        self.assertEqual(address, 'Jalan Melati 5, Beji, Depok, Jawa Barat, 16424')
+        url = fetch.call_args.args[0]
+        self.assertTrue(url.startswith(services.NOMINATIM_URL))
+        self.assertIn('accept-language=id', url)
+        self.assertIn('lat=-6.200000', url)
+
+    def test_second_call_for_same_spot_uses_cache(self):
+        with nominatim() as fetch:
+            services.reverse_geocode(-6.2, 106.8)
+            services.reverse_geocode(-6.20004, 106.80004)  # ~5 m: kunci cache sama
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_rejects_bad_coordinates_without_network(self):
+        with nominatim() as fetch:
+            for lat, lng in ((None, 1), ('abc', 1), (91, 0), (0, 181), ('nan', 0), ('inf', 0)):
+                with self.assertRaises(ValueError, msg=(lat, lng)):
+                    services.reverse_geocode(lat, lng)
+        fetch.assert_not_called()
+
+    def test_network_failure_raises_unavailable_and_is_not_cached(self):
+        with mock.patch('locations.services._http_get_json', side_effect=OSError('down')):
+            with self.assertRaises(services.GeocodeUnavailable):
+                services.reverse_geocode(-6.2, 106.8)
+        with nominatim():
+            self.assertTrue(services.reverse_geocode(-6.2, 106.8))  # tidak ada "kegagalan" tersimpan
+
+    def test_bad_json_counts_as_unavailable(self):
+        with mock.patch('locations.services._http_get_json', side_effect=ValueError('bukan json')):
+            with self.assertRaises(services.GeocodeUnavailable):
+                services.reverse_geocode(-6.2, 106.8)
+
+    def test_no_address_at_point(self):
+        for data in ({'error': 'Unable to geocode'}, {}, []):
+            cache.clear()
+            with nominatim(data):
+                with self.assertRaises(services.AddressNotFound):
+                    services.reverse_geocode(0, 0)
+
+
+class PlaceForMitraTests(LocationsTestCase):
+    def test_creates_mirror_row_from_mitra(self):
+        mitra = make_mitra(layanan=('sepatu', 'gadget'))
+        mitra.alamat = 'Jl.   Mawar\n1'
+        mitra.save()
+        place = services.place_for_mitra(mitra)
+        self.assertEqual((place.osm_type, place.osm_id), ('mitra', mitra.pk))
+        self.assertEqual(place.name, mitra.nama_usaha)
+        self.assertEqual(place.category, 'sepatu')  # layanan pertama, tetap
+        self.assertEqual(place.address, 'Jl. Mawar 1')
+        self.assertEqual(place.phone, '0899')
+        self.assertTrue(place.is_mitra)
+        self.assertEqual(place.detail_url, f'/reviews/mitra/{mitra.pk}/')
+
+    def test_second_call_updates_same_row(self):
+        mitra = make_mitra()
+        first = services.place_for_mitra(mitra)
+        mitra.nama_usaha = 'Nama Baru'
+        mitra.save()
+        second = services.place_for_mitra(mitra)
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(second.name, 'Nama Baru')
+        self.assertEqual(RepairPlace.objects.count(), 1)
+
+    def test_unknown_layanan_falls_back_to_lainnya(self):
+        mitra = make_mitra(layanan=())
+        self.assertEqual(services.place_for_mitra(mitra).category, 'lainnya')
+
+    def test_osm_place_keeps_osm_detail_url(self):
+        place = make_place(osm_id=7)
+        self.assertFalse(place.is_mitra)
+        self.assertEqual(place.detail_url, place.osm_url)

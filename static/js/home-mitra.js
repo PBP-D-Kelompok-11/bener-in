@@ -69,7 +69,6 @@
     line(box, 'Mitra bener.in');
     line(box, m.address);
     line(box, (m.layanan || []).join(', '));
-    line(box, `${m.distance_km} km dari pusat peta`);
     if (m.phone) {
       line(box, 'Telepon: ' + m.phone);
     } else if (contactHidden && loginUrl) {

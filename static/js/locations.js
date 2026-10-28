@@ -54,7 +54,11 @@
     const cfg = page.dataset;
     const authenticated = cfg.authenticated === '1';
     const isCustomer = cfg.customer === '1';
-    const saved = new Set(JSON.parse(document.getElementById('loc-saved-ids')?.textContent || '[]'));
+    // Dua himpunan: tempat OSM (pk RepairPlace) dan mitra bener.in (pk akun mitra).
+    const savedSets = {
+      osm: new Set(JSON.parse(document.getElementById('loc-saved-ids')?.textContent || '[]')),
+      mitra: new Set(JSON.parse(document.getElementById('loc-saved-mitra-ids')?.textContent || '[]')),
+    };
     let map, osmLayer, mitraLayer, controller, runId = 0;
 
     const say = (message, state = 'idle') => {
@@ -95,12 +99,14 @@
     }
 
     // Simpan dengan optimistic UI: tombol langsung berubah, dikembalikan jika gagal.
-    async function savePlace(place, button) {
+    // Mitra bener.in dikirim lewat `mitra_id`, tempat OpenStreetMap lewat `place_id`.
+    async function savePlace(item, kind, button) {
+      const ids = savedSets[kind];
       button.disabled = true;
       button.textContent = 'Tersimpan';
-      saved.add(place.id);
+      ids.add(item.id);
       const body = new FormData();
-      body.append('place_id', place.id);
+      body.append(kind === 'mitra' ? 'mitra_id' : 'place_id', item.id);
       body.append('status', 'want');
       try {
         const result = await request(cfg.createUrl, { method: 'POST', body });
@@ -109,12 +115,33 @@
           action: { label: 'Lihat daftar', run: () => { location.href = cfg.savedUrl; } },
         });
       } catch (result) {
-        saved.delete(place.id);
+        ids.delete(item.id);
         button.disabled = false;
         button.textContent = 'Simpan';
         const message = result?.data?.message || 'Gagal menyimpan. Coba lagi.';
         toast(message, { state: 'error' });
       }
+    }
+
+    function saveControl(item, kind) {
+      if (isCustomer) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-solid';
+        const already = savedSets[kind].has(item.id);
+        button.textContent = already ? 'Tersimpan' : 'Simpan';
+        button.disabled = already;
+        button.addEventListener('click', () => savePlace(item, kind, button));
+        return button;
+      }
+      if (!authenticated) {
+        const link = document.createElement('a');
+        link.className = 'btn btn-outline';
+        link.href = `${cfg.loginUrl}?next=${encodeURIComponent(location.pathname)}`;
+        link.textContent = 'Masuk untuk menyimpan';
+        return link;
+      }
+      return null;  // mitra yang sedang login tidak menyimpan tempat
     }
 
     function popup(item, kind, hidden) {
@@ -126,27 +153,14 @@
       line(box, item.address);
       contactLine(box, item, hidden);
       if (kind === 'mitra') {
-        line(box, `${item.distance_km} km dari pusat peta`);
         const link = document.createElement('a');
         link.className = 'btn btn-outline';
         link.href = item.reviews_url;
         link.textContent = 'Lihat review';
         box.append(link);
-      } else if (isCustomer) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-solid';
-        button.textContent = saved.has(item.id) ? 'Tersimpan' : 'Simpan';
-        button.disabled = saved.has(item.id);
-        button.addEventListener('click', () => savePlace(item, button));
-        box.append(button);
-      } else if (!authenticated) {
-        const link = document.createElement('a');
-        link.className = 'btn btn-outline';
-        link.href = `${cfg.loginUrl}?next=${encodeURIComponent(location.pathname)}`;
-        link.textContent = 'Masuk untuk menyimpan';
-        box.append(link);
       }
+      const control = saveControl(item, kind);
+      if (control) box.append(control);
       return box;
     }
 
