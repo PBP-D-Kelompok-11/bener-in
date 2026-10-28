@@ -38,6 +38,8 @@
                         <a href="{% url 'landing_page' %}#cari-mitra">Cari Mitra</a>
                         <a href="/repair/">Permintaan Saya</a>
                         <a href="{% url 'reviews:impact' %}">Impact</a>
+                        <a href="{% url 'locations:discover' %}">Peta Reparasi</a>
+                        <a href="{% url 'locations:saved' %}">Tempat Tersimpan</a>
                         <a href="{% url 'reviews:mine' %}" class="btn btn-ghost">Review</a>
                     {% elif user.role == 'mitra' %}
                         <a href="/repair/incoming/">Permintaan Masuk</a>
@@ -46,6 +48,7 @@
                     {% endif %}
                 {% else %}
                     <a href="{% url 'landing_page' %}#cari-mitra">Cari reparasi</a>
+                    <a href="{% url 'locations:discover' %}">Peta reparasi</a>
                     <a href="{% url 'landing_page' %}#cara-kerja">Cara kerja</a>
                     <a href="{% url 'landing_page' %}#faq">FAQ</a>
                 {% endif %}
