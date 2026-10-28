@@ -1,0 +1,17 @@
+<li class="loc-card" data-saved-item data-saved-id="{{ saved.pk }}">
+  <div class="loc-card__top">
+    {% if saved.place.is_mitra %}<a class="loc-card__title" href="{{ saved.place.detail_url }}">{{ saved.place.name }}</a>
+    {% else %}<a class="loc-card__title" href="{{ saved.place.detail_url }}" target="_blank" rel="noopener noreferrer">{{ saved.place.name }}</a>{% endif %}
+    <span class="loc-badge loc-badge--{{ saved.status }}">{{ saved.get_status_display }}</span>
+  </div>
+  <p class="loc-meta">{% if saved.place.is_mitra %}Mitra bener.in · {% endif %}{{ saved.place.get_category_display }}{% if saved.place.address %} · {{ saved.place.address }}{% endif %}</p>
+  {% if saved.place.phone %}<p class="loc-meta">Telepon: {{ saved.place.phone }}</p>{% endif %}
+  {% if saved.note %}<p class="loc-note-text">{{ saved.note }}</p>{% endif %}
+  <div class="loc-actions">
+    <a href="{% url 'locations:saved_edit' saved.pk %}" class="btn btn-outline">Ubah</a>
+    <form method="post" action="{% url 'locations:saved_delete' saved.pk %}" data-ajax-delete>
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost">Hapus</button>
+    </form>
+  </div>
+</li>

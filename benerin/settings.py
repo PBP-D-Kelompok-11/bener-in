@@ -33,8 +33,8 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "hisyam-prasetyo-benerin.pws.cs.ui.ac.id", "muhammad-akmal53-benerin.pws.cs.ui.ac.id"]
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 CSRF_TRUSTED_ORIGINS = [
-    'https://muhammad-akmal53-benerin.pws.cs.ui.ac.id',
-    
+    "https://hisyam-prasetyo-benerin.pws.cs.ui.ac.id",
+    "https://muhammad-akmal53-benerin.pws.cs.ui.ac.id",
 ]
 
 # Application definition
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'reviews', 
     'mitra',
     'repair',
+    'locations',
 ]
 
 MIDDLEWARE = [
@@ -115,6 +116,7 @@ AUTHENTICATION_BACKENDS = [
     'authentication.backends.MitraBackend',
 ]
 LOGIN_URL = 'authentication:login'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 

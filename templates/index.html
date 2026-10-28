@@ -139,5 +139,6 @@
   <section class="home-final home-shell" aria-labelledby="home-final-title"><div><p class="home-eyebrow">Kasih kesempatan kedua</p><h2 id="home-final-title">Coba benerin dulu.</h2><p>Mungkin yang kamu butuhkan bukan barang baru.<br>Hanya awal yang baru untuk barang lama.</p></div><a href="#cari-mitra" class="home-button home-button-primary">Cari tempat reparasi <svg aria-hidden="true"><use href="#home-arrow"/></svg></a><span class="home-final-mark" aria-hidden="true">↗</span></section>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
+<script src="{% static 'js/home-mitra.js' %}" data-mitra-url="{% url 'locations:api_mitra' %}" data-login-url="{% url 'authentication:login' %}" defer></script>
 <script src="{% static 'js/home.js' %}" defer></script>
 {% endblock content %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger shadow-sm">
+                <div class="card-body text-center">
+                    <h4 class="card-title text-danger mb-3">Konfirmasi Hapus</h4>
+                    <p>Apakah kamu yakin ingin menghapus profil mitra <strong>{{ mitra.nama_toko }}</strong>?</p>
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <a href="{% url 'mitra:mitra_list' %}" class="btn btn-secondary me-2">Batal</a>
+                        <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

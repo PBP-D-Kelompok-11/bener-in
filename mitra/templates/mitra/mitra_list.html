@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 class="fw-bold m-0">Daftar Mitra Reparasi</h2>
+        <a href="{% url 'mitra:create_mitra' %}" class="btn btn-primary" style="float: right;">+ Tambah Mitra Baru</a>
+    </div>
+
+    <div class="row">
+        {% for mitra in mitra_list %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">{{ mitra.nama_toko }}</h5>
+                        <p class="card-text"><strong>Layanan:</strong> {{ mitra.layanan }}</p>
+                        <p class="card-text"><strong>Alamat:</strong> {{ mitra.alamat }}</p>
+                        <p class="card-text"><strong>Kontak:</strong> {{ mitra.kontak }}</p>
+                    </div>
+                    {% if user.is_authenticated and user == mitra.user %}
+                        <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
+                            <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
+                            <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">Belum ada mitra reparasi terdaftar.</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
