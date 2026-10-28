@@ -2,9 +2,9 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Daftar Mitra Reparasi</h2>
-        <a href="{% url 'mitra:create_mitra' %}" class="btn btn-primary">+ Tambah Mitra Baru</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 class="fw-bold m-0">Daftar Mitra Reparasi</h2>
+        <a href="{% url 'mitra:create_mitra' %}" class="btn btn-primary" style="float: right;">+ Tambah Mitra Baru</a>
     </div>
 
     <div class="row">
@@ -17,10 +17,12 @@
                         <p class="card-text"><strong>Alamat:</strong> {{ mitra.alamat }}</p>
                         <p class="card-text"><strong>Kontak:</strong> {{ mitra.kontak }}</p>
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
-                        <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
-                    </div>
+                    {% if user.is_authenticated and user == mitra.user %}
+                        <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
+                            <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
+                            <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         {% empty %}
