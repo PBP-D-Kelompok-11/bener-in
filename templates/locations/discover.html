@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="{% static 'css/locations.css' %}">
+{% endblock css %}
+
+{% block meta %}
+<title>Peta reparasi — bener.in</title>
+<meta name="description" content="Cari tempat reparasi di sekitarmu dari OpenStreetMap dan mitra terdaftar bener.in.">
+{% endblock meta %}
+
+{% block content %}
+<main class="loc-page" data-loc-discover
+      data-csrf="{{ csrf_token }}"
+      data-authenticated="{{ user.is_authenticated|yesno:'1,0' }}"
+      data-customer="{{ is_customer|yesno:'1,0' }}"
+      data-login-url="{% url 'authentication:login' %}"
+      data-places-url="{% url 'locations:api_places' %}"
+      data-mitra-url="{% url 'locations:api_mitra' %}"
+      data-create-url="{% url 'locations:saved_create' %}"
+      data-saved-url="{% url 'locations:saved' %}">
+  <h1 class="loc-title">Peta reparasi</h1>
+  <p class="loc-lead">Geser peta ke areamu, pilih kategori barang, lalu cari. Tempat dari OpenStreetMap ditandai gelap; mitra terdaftar bener.in ditandai hijau.</p>
+
+  <form class="loc-filter" id="loc-filter" novalidate>
+    <div class="field">
+      <label for="loc-category">Kategori barang</label>
+      <select id="loc-category" name="category" required>
+        <option value="">Pilih kategori…</option>
+        {% for value, label in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="loc-q">Nama atau alamat (opsional)</label>
+      <input id="loc-q" name="q" type="search" maxlength="80" placeholder="Mis. servis, Depok">
+    </div>
+    <label class="loc-check"><input type="checkbox" id="loc-mitra" checked> Tampilkan mitra bener.in</label>
+    <button type="submit" class="btn btn-solid" id="loc-search">Cari di area peta</button>
+  </form>
+
+  <p class="loc-status" id="loc-status" role="status" aria-live="polite">Pilih kategori, lalu tekan “Cari di area peta”.</p>
+
+  <div class="loc-layout">
+    <div id="loc-map" class="loc-map" role="region" aria-label="Peta tempat reparasi"></div>
+    <section class="loc-results" aria-labelledby="loc-results-title">
+      <h2 id="loc-results-title" class="loc-heading">Hasil pencarian</h2>
+      <ol id="loc-results" class="loc-result-list"></ol>
+      <p class="loc-empty" id="loc-results-empty">Belum ada hasil. Cari di peta untuk melihat daftar tempat.</p>
+    </section>
+  </div>
+
+  {% if not user.is_authenticated %}
+    <p class="loc-note">Nomor telepon disembunyikan untuk pengunjung. <a href="{% url 'authentication:login' %}?next={% url 'locations:discover' %}">Masuk</a> untuk melihat kontak dan menyimpan tempat.</p>
+  {% endif %}
+  <p class="loc-note">Data peta &copy; kontributor <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>. Tempat OpenStreetMap belum tentu mitra bener.in; pastikan layanan dan jam buka sebelum berkunjung.</p>
+
+  <div class="loc-toast" data-toast role="status" aria-live="polite" hidden></div>
+  {{ saved_ids|json_script:"loc-saved-ids" }}
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{% static 'js/locations.js' %}" defer></script>
+{% endblock content %}
