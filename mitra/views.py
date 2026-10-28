@@ -49,3 +49,13 @@ def delete_mitra(request, id):
         mitra.delete()
         return redirect('mitra:mitra_list')
     return render(request, 'mitra/mitra_confirm_delete.html', {'mitra': mitra})
+
+@login_required
+def mitra_profile(request):
+    # Ambil data toko mitra yang CUMA dimiliki oleh user yang lagi login
+    user_mitra_list = Mitra.objects.filter(user=request.user)
+    
+    context = {
+        'user_mitra_list': user_mitra_list,
+    }
+    return render(request, 'mitra/mitra_profile.html', context)
