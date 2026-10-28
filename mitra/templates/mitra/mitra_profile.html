@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Profil Akun User -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h3 class="fw-bold">Profil Akun</h3>
+            <p class="mb-1"><strong>Username:</strong> {{ user.username }}</p>
+            <p class="mb-0"><strong>Email:</strong> {{ user.email|default:"-" }}</p>
+        </div>
+    </div>
+
+    <!-- Toko Mitra Milik User -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold m-0">Toko Mitra Saya</h4>
+        <a href="{% url 'mitra:create_mitra' %}" class="btn btn-primary btn-sm">+ Tambah Toko Baru</a>
+    </div>
+
+    <div class="row">
+        {% for mitra in user_mitra_list %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">{{ mitra.nama_toko }}</h5>
+                        <p class="card-text"><strong>Layanan:</strong> {{ mitra.layanan }}</p>
+                        <p class="card-text"><strong>Alamat:</strong> {{ mitra.alamat }}</p>
+                        <p class="card-text"><strong>Kontak:</strong> {{ mitra.kontak }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
+                        <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">Kamu belum memiliki toko mitra terdaftar.</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
