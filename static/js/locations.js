@@ -69,6 +69,8 @@
     map = L.map('loc-map', { scrollWheelZoom: false }).setView([-6.2088, 106.8456], 12);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
+      // Django default 'same-origin' menghapus Referer; tile OSM menolak tanpa Referer.
+      referrerPolicy: 'strict-origin-when-cross-origin',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
     osmLayer = L.layerGroup().addTo(map);
@@ -169,57 +171,82 @@
       return (bounds.getNorth() - bounds.getSouth()) <= 0.6 && (bounds.getEast() - bounds.getWest()) <= 0.6;
     }
 
+    async function getJson(url, signal) {
+      const response = await fetch(url, { signal, credentials: 'same-origin' });
+      const data = await response.json().catch(() => ({}));
+      return { ok: response.ok && data.ok !== false, data };
+    }
+
+    // Mitra bener.in: kategori opsional; hasil langsung digambar saat tiba.
+    async function loadMitra(params, signal, thisRun) {
+      const { ok, data } = await getJson(`${cfg.mitraUrl}?${params}`, signal);
+      if (thisRun !== runId) return { count: 0 };
+      if (!ok) return { count: 0, error: data.message || 'Mitra bener.in belum berhasil dimuat.' };
+      const items = data.mitra || [];
+      items.forEach(item => addItem(item, 'mitra', data.contact_hidden));
+      return { count: items.length };
+    }
+
+    // OpenStreetMap lewat proxy server: kategori wajib.
+    async function loadOsm(params, signal, thisRun) {
+      const { ok, data } = await getJson(`${cfg.placesUrl}?${params}`, signal);
+      if (thisRun !== runId) return { count: 0 };
+      if (!ok) return { count: 0, error: data.message || 'Pencarian OpenStreetMap belum berhasil.' };
+      const items = data.places || [];
+      items.forEach(item => addItem(item, 'osm', data.contact_hidden));
+      return { count: items.length, stale: Boolean(data.stale) };
+    }
+
     async function search() {
       const category = form.elements.category.value;
-      if (!category) return say('Pilih kategori barang dulu.', 'error');
+      const wantOsm = Boolean(category);
+      const wantMitra = form.querySelector('#loc-mitra').checked;
+      if (!wantOsm && !wantMitra) {
+        return say('Pilih kategori, atau centang “Tampilkan mitra bener.in”.', 'error');
+      }
       const bounds = map.getBounds();
-      if (!withinLimit(bounds)) return say('Area terlalu luas. Perbesar peta, lalu cari lagi.', 'error');
+      if (wantOsm && !withinLimit(bounds)) {
+        return say('Area terlalu luas. Perbesar peta, lalu cari lagi.', 'error');
+      }
 
       const thisRun = ++runId;
       if (controller) controller.abort();
       controller = new AbortController();
+      const { signal } = controller;
       osmLayer.clearLayers();
       mitraLayer.clearLayers();
       list.replaceChildren();
       say('Mencari tempat reparasi…', 'loading');
 
+      const center = map.getCenter();
+      const radius = Math.min(100, Math.max(1, map.distance(center, bounds.getNorthEast()) / 1000));
+      const mitraParams = new URLSearchParams({ lat: center.lat, lng: center.lng, radius_km: radius.toFixed(1) });
+      if (category) mitraParams.set('category', category);
       const placeParams = new URLSearchParams({
         category, q: form.elements.q.value.trim(),
         south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast(),
       });
-      const center = map.getCenter();
-      const radius = Math.min(100, Math.max(1, map.distance(center, bounds.getNorthEast()) / 1000));
-      const mitraParams = new URLSearchParams({ category, lat: center.lat, lng: center.lng, radius_km: radius.toFixed(1) });
-      const wantMitra = form.querySelector('#loc-mitra').checked;
 
-      try {
-        const [places, mitra] = await Promise.all([
-          fetch(`${cfg.placesUrl}?${placeParams}`, { signal: controller.signal, credentials: 'same-origin' }),
-          wantMitra ? fetch(`${cfg.mitraUrl}?${mitraParams}`, { signal: controller.signal, credentials: 'same-origin' }) : null,
-        ]);
-        if (thisRun !== runId) return;
-        const placesData = await places.json().catch(() => ({}));
-        const mitraData = mitra ? await mitra.json().catch(() => ({})) : { mitra: [] };
-        if (thisRun !== runId) return;
+      const [mitraJob, osmJob] = await Promise.allSettled([
+        wantMitra ? loadMitra(mitraParams, signal, thisRun) : Promise.resolve({ count: 0 }),
+        wantOsm ? loadOsm(placeParams, signal, thisRun) : Promise.resolve({ count: 0 }),
+      ]);
+      if (thisRun !== runId) return;  // sudah ada pencarian yang lebih baru
 
-        let total = 0;
-        (mitraData.mitra || []).forEach(item => { addItem(item, 'mitra', mitraData.contact_hidden); total++; });
-        if (places.ok) {
-          (placesData.places || []).forEach(item => { addItem(item, 'osm', placesData.contact_hidden); total++; });
-        }
-        emptyBox.hidden = total > 0;
+      const failed = { count: 0, error: 'Pencarian belum berhasil. Periksa koneksi lalu coba lagi.' };
+      const mitra = mitraJob.status === 'fulfilled' ? mitraJob.value : failed;
+      const osm = osmJob.status === 'fulfilled' ? osmJob.value : failed;
+      const total = mitra.count + osm.count;
+      const errors = [mitra.error, osm.error].filter(Boolean);
+      emptyBox.hidden = total > 0;
 
-        if (!places.ok) {
-          say(placesData.message || 'Pencarian OpenStreetMap belum berhasil.', 'error');
-        } else if (placesData.stale) {
-          say(`Server OpenStreetMap sedang sibuk. Menampilkan ${total} hasil dari data tersimpan sebelumnya.`, 'success');
-        } else {
-          say(total ? `Ditemukan ${total} tempat.` : 'Belum ada hasil di area ini. Coba kategori atau area lain.', total ? 'success' : 'idle');
-        }
-      } catch (error) {
-        if (error.name === 'AbortError' || thisRun !== runId) return;
-        say('Pencarian belum berhasil. Periksa koneksi lalu coba lagi.', 'error');
-      }
+      let message = total
+        ? `Ditemukan ${total} tempat.`
+        : 'Belum ada hasil di area ini. Coba kategori atau area lain.';
+      if (osm.stale) message += ' Server OpenStreetMap sedang sibuk; hasilnya dari data tersimpan sebelumnya.';
+      if (!wantOsm) message += ' Pilih kategori untuk juga mencari tempat dari OpenStreetMap.';
+      if (errors.length) message += ' ' + errors.join(' ');
+      say(message, errors.length ? 'error' : (total ? 'success' : 'idle'));
     }
 
     form.addEventListener('submit', event => { event.preventDefault(); search(); });

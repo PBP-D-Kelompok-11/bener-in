@@ -28,7 +28,7 @@
     <div class="field">
       <label for="loc-category">Kategori barang</label>
       <select id="loc-category" name="category" required>
-        <option value="">Pilih kategori…</option>
+        <option value="">Semua kategori (hanya mitra bener.in)</option>
         {% for value, label in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
       </select>
     </div>
@@ -40,7 +40,7 @@
     <button type="submit" class="btn btn-solid" id="loc-search">Cari di area peta</button>
   </form>
 
-  <p class="loc-status" id="loc-status" role="status" aria-live="polite">Pilih kategori, lalu tekan “Cari di area peta”.</p>
+  <p class="loc-status" id="loc-status" role="status" aria-live="polite">Tekan “Cari di area peta” untuk melihat mitra bener.in. Pilih kategori untuk juga mencari tempat dari OpenStreetMap.</p>
 
   <div class="loc-layout">
     <div id="loc-map" class="loc-map" role="region" aria-label="Peta tempat reparasi"></div>
