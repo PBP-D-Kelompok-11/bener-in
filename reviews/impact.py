@@ -25,9 +25,7 @@ def get_impact_summary(saved_count):
         progress_percent = 100
         remaining = 0
     else:
-        start = current_badge["min"] if current_badge else 0
-        span = next_badge["min"] - start
-        progress_percent = int((saved_count - start) / span * 100)
+        progress_percent = int(saved_count / next_badge["min"] * 100)
         remaining = next_badge["min"] - saved_count
 
     return {
