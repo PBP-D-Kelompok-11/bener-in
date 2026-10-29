@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!-- Import Google Font Space Grotesk (Font Asli WACT bener.in) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+<!-- CSS Leaflet OpenStreetMap -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
 <style>
-    /* Paksa seluruh elemen di halaman form menggunakan Space Grotesk */
-    *, body, html, input, textarea, select, button, label, h1, p, div, span {
+    *, body, html, h1, h2, h3, h4, p, span, div, a, button, label, input, textarea {
         font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif !important;
     }
 
@@ -16,157 +17,288 @@
         background-color: #F6F6F0 !important;
     }
 
-    .register-layout-container {
-        max-width: 580px;
-        margin: 0 auto;
-        padding: 40px 20px 80px 20px;
+    .form-outer-wrapper {
+        background-color: #F6F6F0;
+        min-height: 100vh;
+        padding-top: 3.5rem;
+        padding-bottom: 6rem;
     }
-    
-    .register-title {
-        font-size: 36px;
+
+    /* Container utama dibuat lebar tanpa card pembungkus agar mirip register */
+    .form-clean-container {
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .form-title-main {
+        font-size: 38px;
         font-weight: 700;
-        color: #111827;
+        color: #1E293B;
         margin: 0 0 10px 0;
-        letter-spacing: -0.8px;
+        text-align: center;
+        letter-spacing: -1px;
         line-height: 1.15;
     }
-    
-    .register-subtitle {
-        color: #4B5563;
+
+    .form-subtitle-main {
+        color: #64748B;
         font-size: 14px;
-        font-weight: 400;
-        margin-bottom: 36px;
+        text-align: center;
+        margin-bottom: 40px;
         line-height: 1.5;
+        font-weight: 400;
     }
-    
+
     .form-group-item {
         margin-bottom: 22px;
     }
-    
-    .form-group-item label {
+
+    .form-label-custom {
         display: block;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
-        color: #111827;
+        color: #1E293B;
         margin-bottom: 8px;
-        letter-spacing: -0.2px;
-    }
-    
-    /* Box Input & Textarea dengan Font Space Grotesk */
-    .form-group-item input, 
-    .form-group-item textarea, 
-    .form-group-item select,
-    .form-input-custom {
-        width: 100%;
-        padding: 12px 16px;
-        border: 1.5px solid #111827;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 500;
-        color: #111827;
-        background-color: #FFFFFF;
-        box-sizing: border-box;
-        transition: all 0.15s ease-in-out;
-        resize: vertical;
-    }
-    
-    /* Placeholder dengan Font Space Grotesk */
-    .form-group-item input::placeholder,
-    .form-group-item textarea::placeholder,
-    .form-input-custom::placeholder,
-    ::-webkit-input-placeholder,
-    :-moz-placeholder,
-    ::-moz-placeholder,
-    :-ms-input-placeholder {
-        font-family: 'Space Grotesk', sans-serif !important;
-        color: #9CA3AF !important;
-        font-weight: 400 !important;
-        font-size: 14px !important;
     }
 
-    .form-group-item input:focus, 
-    .form-group-item textarea:focus,
-    .form-input-custom:focus {
+    /* Input box dengan ukuran proporsional persis halaman register */
+    .input-box-custom {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 1px solid #000000;
+        font-size: 14px;
+        box-sizing: border-box;
+        background-color: #FFFFFF;
+        color: #1E293B;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-box-custom:focus {
         outline: none;
         border-color: #1B4332;
-        box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.15);
+        box-shadow: 0 0 0 2px rgba(27, 67, 50, 0.1);
     }
-    
-    /* Tombol Aksi */
+
+    /* Checkbox Layanan Grid (Clean Style) */
+    .services-grid-clean {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px 20px;
+        margin-top: 6px;
+    }
+
+    .checkbox-label-clean {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 13px;
+        color: #334155;
+        font-weight: 500;
+        cursor: pointer;
+        line-height: 1.3;
+    }
+
+    .checkbox-label-clean input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin-top: 1px;
+        accent-color: #1B4332;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    /* Peta Leaflet OpenStreetMap */
+    #map {
+        height: 260px;
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #000000;
+        margin-top: 8px;
+        z-index: 1;
+    }
+
     .btn-action-wrapper {
         display: flex;
+        flex-direction: column;
         gap: 12px;
         margin-top: 36px;
     }
-    
-    .btn-submit-main {
+
+    .btn-submit-dark {
+        width: 100%;
         background-color: #1B4332;
         color: #FFFFFF;
-        padding: 14px 28px;
+        padding: 14px;
         border-radius: 10px;
-        font-size: 14px;
-        font-weight: 700;
         border: none;
+        font-size: 15px;
+        font-weight: 700;
         cursor: pointer;
-        flex: 1;
-        transition: background-color 0.2s ease;
+        transition: background-color 0.2s;
+        text-align: center;
     }
-    
-    .btn-submit-main:hover {
+
+    .btn-submit-dark:hover {
         background-color: #2D6A4F;
     }
-    
-    .btn-cancel-main {
-        background-color: #E5E7EB;
-        color: #374151;
-        padding: 14px 28px;
+
+    .btn-cancel-link {
+        width: 100%;
+        background-color: #E2E8F0;
+        color: #475569;
+        padding: 12px;
         border-radius: 10px;
+        text-decoration: none;
         font-size: 14px;
         font-weight: 700;
-        text-decoration: none;
         text-align: center;
-        border: none;
-        flex: 1;
-        transition: background-color 0.2s ease;
+        display: block;
+        box-sizing: border-box;
     }
-    
-    .btn-cancel-main:hover {
-        background-color: #D1D5DB;
-        color: #111827;
+
+    .btn-cancel-link:hover {
+        background-color: #CBD5E1;
     }
 </style>
 
-<div class="register-layout-container">
-    <h1 class="register-title">
-        {% if 'Edit' in title %}
-            Edit Profil Mitra
-        {% else %}
-            Daftar sebagai<br>Mitra Reparasi
-        {% endif %}
-    </h1>
-    <p class="register-subtitle">
-        Lengkapi detail informasi toko milikmu agar pelanggan dapat menemukan dan mengajukan perbaikan.
-    </p>
+<div class="form-outer-wrapper">
+    <div class="form-clean-container">
+        <h1 class="form-title-main">{{ title|default:"Edit Profil Mitra" }}</h1>
+        <p class="form-subtitle-main">Lengkapi detail informasi toko milikmu supaya pelanggan dapat menemukanmu.</p>
 
-    <form method="POST">
-        {% csrf_token %}
-        
-        {% for field in form %}
-        <div class="form-group-item">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-                <div style="color: #DC2626; font-size: 12px; margin-top: 6px; font-weight: 600;">
-                    {{ field.errors.0 }}
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Nama Toko -->
+            <div class="form-group-item">
+                <label class="form-label-custom">Nama Toko / Usaha</label>
+                <input type="text" name="nama_toko" class="input-box-custom" value="{{ form.nama_toko.value|default:'' }}" placeholder="Masukkan nama usaha..." required>
+            </div>
+
+            <!-- Checkbox Layanan -->
+            <div class="form-group-item">
+                <label class="form-label-custom">Layanan yang dikerjakan</label>
+                <input type="hidden" name="layanan" id="id_layanan_hidden" value="{{ form.layanan.value|default:'' }}">
+                
+                <div class="services-grid-clean">
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Gadget (HP, laptop, tablet)"> Gadget (HP, laptop, tablet)
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Perabot elektronik (TV, kulkas, AC)"> Perabot elektronik (TV, kulkas, AC)
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Mobil"> Mobil
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Motor"> Motor
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Sepeda"> Sepeda
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Furnitur & perabot kayu"> Furnitur & perabot kayu
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Sepatu & tas"> Sepatu & tas
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Pakaian & jahitan"> Pakaian & jahitan
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Jam tangan & jam dinding"> Jam tangan & jam dinding
+                    </label>
+                    <label class="checkbox-label-clean">
+                        <input type="checkbox" class="srv-chk" value="Perhiasan"> Perhiasan
+                    </label>
                 </div>
-            {% endif %}
-        </div>
-        {% endfor %}
+            </div>
 
-        <div class="btn-action-wrapper">
-            <a href="{% url 'mitra:mitra_profile' %}" class="btn-cancel-main">Batal</a>
-            <button type="submit" class="btn-submit-main">Simpan Profil Mitra</button>
-        </div>
-    </form>
+            <!-- Alamat & Map OpenStreetMap -->
+            <div class="form-group-item">
+                <label class="form-label-custom">Alamat Lengkap Usaha</label>
+                <textarea name="alamat" id="id_alamat" class="input-box-custom" rows="3" placeholder="Alamat lengkap toko..." required>{{ form.alamat.value|default:'' }}</textarea>
+                
+                <label class="form-label-custom" style="margin-top: 14px;">Lokasi usaha (Klik peta untuk menandai)</label>
+                <div id="map"></div>
+            </div>
+
+            <!-- Kontak / WA -->
+            <div class="form-group-item">
+                <label class="form-label-custom">Kontak (HP/WhatsApp)</label>
+                <input type="text" name="kontak" class="input-box-custom" value="{{ form.kontak.value|default:'' }}" placeholder="08xxxxxxxxxx" required>
+            </div>
+
+            <!-- Buttons -->
+            <div class="btn-action-wrapper">
+                <button type="submit" class="btn-submit-dark">Simpan Profil Mitra</button>
+                <a href="{% url 'mitra:mitra_profile' %}" class="btn-cancel-link">Batal</a>
+            </div>
+        </form>
+    </div>
 </div>
+
+<!-- JS Leaflet OpenStreetMap API -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // --- 1. SINKRONISASI CHECKBOX LAYANAN ---
+        const hiddenLayananInput = document.getElementById("id_layanan_hidden");
+        const checkboxes = document.querySelectorAll(".srv-chk");
+
+        const existingLayanan = hiddenLayananInput.value.toLowerCase();
+        checkboxes.forEach(chk => {
+            if (existingLayanan.includes(chk.value.toLowerCase().split(' ')[0])) {
+                chk.checked = true;
+            }
+        });
+
+        function updateLayananString() {
+            const selected = [];
+            checkboxes.forEach(chk => {
+                if (chk.checked) selected.push(chk.value);
+            });
+            hiddenLayananInput.value = selected.join(", ");
+        }
+
+        checkboxes.forEach(chk => chk.addEventListener("change", updateLayananString));
+
+        // --- 2. INTEGRASI OPENSTREETMAP API ---
+        let defaultLat = -6.3658;
+        let defaultLng = 106.8312;
+
+        const map = L.map('map').setView([defaultLat, defaultLng], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+        function updateAddressFromCoords(lat, lng) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        document.getElementById('id_alamat').value = data.display_name;
+                    }
+                })
+                .catch(err => console.log(err));
+        }
+
+        map.on('click', function (e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            marker.setLatLng([lat, lng]);
+            updateAddressFromCoords(lat, lng);
+        });
+
+        marker.on('dragend', function (e) {
+            const position = marker.getLatLng();
+            updateAddressFromCoords(position.lat, position.lng);
+        });
+    });
+</script>
 {% endblock %}
