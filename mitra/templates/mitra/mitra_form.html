@@ -1,31 +1,172 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title mb-4">{{ title }}</h3>
-                    <form method="POST">
-                        {% csrf_token %}
-                        {% for field in form %}
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <div class="text-danger small">{{ field.errors }}</div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{% url 'mitra:mitra_list' %}" class="btn btn-secondary">Batal</a>
-                            <button type="submit" class="btn btn-success">Simpan</button>
-                        </div>
-                    </form>
+<!-- Import Google Font Space Grotesk (Font Asli WACT bener.in) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* Paksa seluruh elemen di halaman form menggunakan Space Grotesk */
+    *, body, html, input, textarea, select, button, label, h1, p, div, span {
+        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif !important;
+    }
+
+    body, html {
+        background-color: #F6F6F0 !important;
+    }
+
+    .register-layout-container {
+        max-width: 580px;
+        margin: 0 auto;
+        padding: 40px 20px 80px 20px;
+    }
+    
+    .register-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 10px 0;
+        letter-spacing: -0.8px;
+        line-height: 1.15;
+    }
+    
+    .register-subtitle {
+        color: #4B5563;
+        font-size: 14px;
+        font-weight: 400;
+        margin-bottom: 36px;
+        line-height: 1.5;
+    }
+    
+    .form-group-item {
+        margin-bottom: 22px;
+    }
+    
+    .form-group-item label {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+        letter-spacing: -0.2px;
+    }
+    
+    /* Box Input & Textarea dengan Font Space Grotesk */
+    .form-group-item input, 
+    .form-group-item textarea, 
+    .form-group-item select,
+    .form-input-custom {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid #111827;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #111827;
+        background-color: #FFFFFF;
+        box-sizing: border-box;
+        transition: all 0.15s ease-in-out;
+        resize: vertical;
+    }
+    
+    /* Placeholder dengan Font Space Grotesk */
+    .form-group-item input::placeholder,
+    .form-group-item textarea::placeholder,
+    .form-input-custom::placeholder,
+    ::-webkit-input-placeholder,
+    :-moz-placeholder,
+    ::-moz-placeholder,
+    :-ms-input-placeholder {
+        font-family: 'Space Grotesk', sans-serif !important;
+        color: #9CA3AF !important;
+        font-weight: 400 !important;
+        font-size: 14px !important;
+    }
+
+    .form-group-item input:focus, 
+    .form-group-item textarea:focus,
+    .form-input-custom:focus {
+        outline: none;
+        border-color: #1B4332;
+        box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.15);
+    }
+    
+    /* Tombol Aksi */
+    .btn-action-wrapper {
+        display: flex;
+        gap: 12px;
+        margin-top: 36px;
+    }
+    
+    .btn-submit-main {
+        background-color: #1B4332;
+        color: #FFFFFF;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        flex: 1;
+        transition: background-color 0.2s ease;
+    }
+    
+    .btn-submit-main:hover {
+        background-color: #2D6A4F;
+    }
+    
+    .btn-cancel-main {
+        background-color: #E5E7EB;
+        color: #374151;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+        border: none;
+        flex: 1;
+        transition: background-color 0.2s ease;
+    }
+    
+    .btn-cancel-main:hover {
+        background-color: #D1D5DB;
+        color: #111827;
+    }
+</style>
+
+<div class="register-layout-container">
+    <h1 class="register-title">
+        {% if 'Edit' in title %}
+            Edit Profil Mitra
+        {% else %}
+            Daftar sebagai<br>Mitra Reparasi
+        {% endif %}
+    </h1>
+    <p class="register-subtitle">
+        Lengkapi detail informasi toko milikmu agar pelanggan dapat menemukan dan mengajukan perbaikan.
+    </p>
+
+    <form method="POST">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-group-item">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <div style="color: #DC2626; font-size: 12px; margin-top: 6px; font-weight: 600;">
+                    {{ field.errors.0 }}
                 </div>
-            </div>
+            {% endif %}
         </div>
-    </div>
+        {% endfor %}
+
+        <div class="btn-action-wrapper">
+            <a href="{% url 'mitra:mitra_profile' %}" class="btn-cancel-main">Batal</a>
+            <button type="submit" class="btn-submit-main">Simpan Profil Mitra</button>
+        </div>
+    </form>
 </div>
 {% endblock %}

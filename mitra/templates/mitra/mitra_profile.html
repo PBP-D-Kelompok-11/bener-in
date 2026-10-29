@@ -1,43 +1,416 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <!-- Profil Akun User -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-body">
-            <h3 class="fw-bold">Profil Akun</h3>
-            <p class="mb-1"><strong>Username:</strong> {{ user.username }}</p>
-            <p class="mb-0"><strong>Email:</strong> {{ user.email|default:"-" }}</p>
+<!-- Import Google Font Space Grotesk (Font Asli bener.in / WACT) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* Force seluruh halaman Profil Mitra memakai Space Grotesk */
+    *, body, html, h1, h2, h3, h4, p, span, div, a, button {
+        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif !important;
+    }
+
+    body, html {
+        background-color: #F6F6F0 !important;
+    }
+
+    .profile-outer-wrapper {
+        background-color: #F6F6F0;
+        min-height: 100vh;
+        padding-top: 2.5rem;
+        padding-bottom: 5rem;
+    }
+
+    /* Container diperbesar dari 900px ke 1060px biar proporsional dan luas ke tengah */
+    .profile-container {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 0 24px;
+    }
+
+    /* Badge Pill Header */
+    .badge-pill-header {
+        display: inline-block;
+        color: #2D6A4F;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+
+    .profile-title {
+        font-size: 38px;
+        font-weight: 700;
+        color: #1E293B;
+        margin: 0 0 8px 0;
+        letter-spacing: -1px;
+    }
+
+    .profile-subtitle {
+        color: #64748B;
+        font-size: 15px;
+        font-weight: 400;
+        margin-bottom: 32px;
+    }
+
+    /* User Info Card Diperbesar */
+    .custom-white-card {
+        background: #FFFFFF;
+        border-radius: 20px;
+        padding: 28px 32px;
+        border: 1px solid #EBEBE3;
+        margin-bottom: 32px;
+        width: 100%;
+        box-sizing: border-box;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+
+    .user-info-flex {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .avatar-circle-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #1B4332;
+        color: #FFFFFF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .user-details h3 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: #1E293B;
+        letter-spacing: -0.5px;
+    }
+
+    .user-details p {
+        margin: 4px 0 0 0;
+        font-size: 14px;
+        color: #64748B;
+        font-weight: 400;
+    }
+
+    /* Section Header */
+    .section-header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        width: 100%;
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #1E293B;
+        letter-spacing: -0.5px;
+    }
+
+    .btn-main-dark {
+        background-color: #1B4332;
+        color: #FFFFFF;
+        padding: 12px 24px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+        display: inline-block;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-main-dark:hover {
+        background-color: #2D6A4F;
+        color: #FFFFFF;
+    }
+
+    /* Kartu Toko Diperbesar & Makin Gagah */
+    .full-store-card {
+        width: 100%;
+        background: #FFFFFF;
+        border-radius: 20px;
+        padding: 36px 40px;
+        border: 1px solid #EBEBE3;
+        box-sizing: border-box;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+    }
+
+    .store-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid #F1F5F9;
+    }
+
+    /* Nama Toko Diperbesar */
+    .store-name-text {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1E293B;
+        margin: 0;
+        letter-spacing: -0.6px;
+        word-break: break-word;
+    }
+
+    .status-badge-pill {
+        background-color: #E6F4EA;
+        color: #137333;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 16px;
+        border-radius: 20px;
+        flex-shrink: 0;
+    }
+
+    /* Row Informasi Layanan, Alamat, Kontak */
+    .info-row-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 16px;
+        color: #334155;
+        line-height: 1.6;
+    }
+
+    .info-row-item strong {
+        color: #1E293B;
+        font-weight: 700;
+        min-width: 75px;
+    }
+
+    .info-icon-svg {
+        width: 22px;
+        height: 22px;
+        color: #1B4332;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    /* Tombol Aksi Bening (Edit & Hapus) Diperbesar */
+    .action-btn-group {
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid #F1F5F9;
+        display: flex;
+        gap: 14px;
+    }
+
+    .btn-ghost-edit {
+        font-size: 14px;
+        color: #2D6A4F;
+        text-decoration: none;
+        border: 1px solid transparent;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+        background-color: #F0FDF4;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-ghost-edit:hover {
+        background-color: #DCFCE7;
+        color: #137333;
+    }
+
+    .btn-ghost-delete {
+        font-size: 14px;
+        color: #DC2626;
+        text-decoration: none;
+        border: 1px solid transparent;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+        background-color: #FEF2F2;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-ghost-delete:hover {
+        background-color: #FEE2E2;
+        color: #991B1B;
+    }
+
+    /* Empty State Card */
+    .empty-state-card-exact {
+        width: 100%;
+        background: #FFFFFF;
+        border: 1px solid #EBEBE3;
+        border-radius: 20px;
+        padding: 48px 40px;
+        box-sizing: border-box;
+        text-align: left;
+    }
+
+    .empty-state-card-exact h3 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1E293B;
+        margin: 0 0 10px 0;
+        letter-spacing: -0.5px;
+    }
+
+    .empty-state-card-exact p {
+        font-size: 15px;
+        color: #64748B;
+        margin: 0 0 28px 0;
+        line-height: 1.5;
+        font-weight: 400;
+    }
+</style>
+
+<div class="profile-outer-wrapper">
+    <div class="profile-container">
+        <!-- Header Banner -->
+        <div>
+            <span class="badge-pill-header">• PROFIL MITRA & AKUN</span>
+            <h1 class="profile-title">Profil Mitra Saya</h1>
+            <p class="profile-subtitle">Kelola informasi akun dan daftar toko mitra reparasi milikmu di platform bener.in.</p>
         </div>
-    </div>
 
-    <!-- Toko Mitra Milik User -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold m-0">Toko Mitra Saya</h4>
-        <a href="{% url 'mitra:create_mitra' %}" class="btn btn-primary btn-sm">+ Tambah Toko Baru</a>
-    </div>
-
-    <div class="row">
-        {% for mitra in user_mitra_list %}
-            <div class="col-md-4 mb-3">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold">{{ mitra.nama_toko }}</h5>
-                        <p class="card-text"><strong>Layanan:</strong> {{ mitra.layanan }}</p>
-                        <p class="card-text"><strong>Alamat:</strong> {{ mitra.alamat }}</p>
-                        <p class="card-text"><strong>Kontak:</strong> {{ mitra.kontak }}</p>
-                    </div>
-                    <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
-                        <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
-                    </div>
+        <!-- User Info Card -->
+        <div class="custom-white-card">
+            <div class="user-info-flex">
+                <div class="avatar-circle-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                        <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+                    </svg>
+                </div>
+                <div class="user-details">
+                    <h3>{{ user.username }}</h3>
+                    <p>{{ user.email|default:"benerin@gmail.com" }}</p>
                 </div>
             </div>
-        {% empty %}
-            <div class="col-12">
-                <div class="alert alert-info">Kamu belum memiliki toko mitra terdaftar.</div>
-            </div>
-        {% endfor %}
+        </div>
+
+        <!-- Section Header -->
+        <div class="section-header-flex">
+            <h3 class="section-title">Daftar Toko Mitra</h3>
+            <a href="{% url 'mitra:create_mitra' %}" class="btn-main-dark">+ Tambah Toko Baru</a>
+        </div>
+
+        <!-- Content Area -->
+        <div style="width: 100%;">
+            {% if user_mitra_list %}
+                {% for mitra in user_mitra_list %}
+                <div class="full-store-card">
+                    <div class="store-header-row">
+                        <h4 class="store-name-text">{{ mitra.nama_toko }}</h4>
+                        <span class="status-badge-pill">Toko Aktif</span>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                        </svg>
+                        <div>
+                            <strong>Layanan:</strong> {{ mitra.layanan }}
+                        </div>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div>
+                            <strong>Alamat:</strong> {{ mitra.alamat }}
+                        </div>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <div>
+                            <strong>Kontak:</strong> {{ mitra.kontak }}
+                        </div>
+                    </div>
+
+                    <div class="action-btn-group">
+                        <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn-ghost-edit">
+                            ✏️ Edit Toko
+                        </a>
+                        <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn-ghost-delete">
+                            🗑️ Hapus Toko
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                {% for mitra in all_mitra_list %}
+                <div class="full-store-card">
+                    <div class="store-header-row">
+                        <h4 class="store-name-text">{{ mitra.nama_toko }}</h4>
+                        <span class="status-badge-pill">Toko Aktif</span>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+                        </svg>
+                        <div>
+                            <strong>Layanan:</strong> {{ mitra.layanan }}
+                        </div>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div>
+                            <strong>Alamat:</strong> {{ mitra.alamat }}
+                        </div>
+                    </div>
+
+                    <div class="info-row-item">
+                        <svg class="info-icon-svg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <div>
+                            <strong>Kontak:</strong> {{ mitra.kontak }}
+                        </div>
+                    </div>
+
+                    <div class="action-btn-group">
+                        <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn-ghost-edit">
+                            ✏️ Edit Toko
+                        </a>
+                        <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn-ghost-delete">
+                            🗑️ Hapus Toko
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state-card-exact">
+                    <h3>Belum ada toko terdaftar.</h3>
+                    <p>Mulai daftarkan tokomu sekarang agar pelanggan dapat menemukan layananmu!</p>
+                    <a href="{% url 'mitra:create_mitra' %}" class="btn-main-dark">+ Daftarkan Toko Sekarang</a>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
