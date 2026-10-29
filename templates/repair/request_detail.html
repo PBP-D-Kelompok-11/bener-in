@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block meta %}<title>{{ repair.item_name }} | Permintaan Reparasi | bener.in</title>{% endblock meta %}
-{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}">{% endblock css %}
+{% block css %}<link rel="stylesheet" href="{% static 'css/repair.css' %}"><link rel="stylesheet" href="{% static 'css/reviews.css' %}">{% endblock css %}
 
 {% block content %}
 <main class="repair-page repair-page--detail">
@@ -30,9 +30,9 @@
             {% if viewer_is_customer and repair.status == 'completed' %}
             <div class="repair-actions repair-actions--start">
                 {% if repair.review %}
-                <a class="repair-button repair-button--quiet" href="{% url 'reviews:edit' repair.review.pk %}">Ubah review</a>
+                <a class="repair-button repair-button--quiet rv-btn" href="{% url 'reviews:edit' repair.review.pk %}">Ubah review</a>
                 {% else %}
-                <a class="repair-button" href="{% url 'reviews:create' repair.pk %}">Beri review</a>
+                <a class="repair-button rv-btn" href="{% url 'reviews:create' repair.pk %}">Beri review</a>
                 {% endif %}
             </div>
             {% endif %}

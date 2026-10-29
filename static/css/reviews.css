@@ -371,3 +371,59 @@ body:has(.rv-page) {
 @media (prefers-reduced-motion: reduce) {
   .rv-card, .rv-chip { transition: none; }
 }
+
+.rv-page a:not(.btn),
+.rv-page a:not(.btn):visited {
+  color: var(--leaf);
+  font-weight: 700;
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat;
+  transition: background-size .25s;
+}
+
+.rv-page a:not(.btn):hover,
+.rv-page a:not(.btn):focus-visible {
+  background-size: 100% 2px;
+}
+
+/* Tombol: warna teks tetap setelah dikunjungi, naik sedikit saat hover */
+.btn-outline:visited,
+.btn-ghost:visited,
+.rv-btn,
+.rv-btn:visited {
+  color: var(--ink);
+}
+
+.rv-page .btn,
+.rv-btn {
+  transition: transform .15s, background .15s, border-color .15s, box-shadow .15s;
+}
+
+.rv-page .btn:hover,
+.rv-btn:hover {
+  transform: translateY(-2px);
+}
+
+.rv-page .btn-outline:hover,
+.rv-btn:hover {
+  background: var(--lime);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.rv-page .btn-ghost:not(.rv-confirm):hover {
+  background: rgba(47, 125, 79, .1);
+  color: var(--leaf);
+}
+
+/* Kartu daftar dan badge terbuka: terangkat tipis */
+.rv-list .rv-card:hover,
+.badge--unlocked:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(20, 38, 28, .12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-page .btn:hover, .rv-btn:hover,
+  .rv-list .rv-card:hover, .badge--unlocked:hover { transform: none; }
+}
