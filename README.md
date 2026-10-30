@@ -22,7 +22,6 @@ Digunakan untuk mendapatkan data geografis/lokasi yang relevan bagi fitur pencar
 
 - **Customer**: Mencari mitra reparasi, melihat profil dan lokasi mitra, mengajukan Repair Request, memantau status reparasi, memberi review setelah repair selesai.
 - **Mitra Reparasi**: Mendaftar sebagai mitra, membuat profil (lokasi, kontak, layanan), menerima Repair Request, memperbarui status reparasi.
-- **Admin**: Mengelola data pengguna, mitra, dan aktivitas aplikasi.
 
 ## Anggota Kelompok
 
