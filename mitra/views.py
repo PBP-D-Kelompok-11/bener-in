@@ -1,76 +1,84 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from .models import Mitra
-from .forms import MitraForm
+from django.http import HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
 from authentication.models import Customer
+
+from .forms import MitraForm
+from .models import Mitra
+
 
 def get_mitra_list(request):
     mitra_list = Mitra.objects.all().values('id', 'nama_toko', 'layanan', 'alamat', 'kontak')
     return JsonResponse(list(mitra_list), safe=False)
 
+
 def mitra_list_view(request):
     mitra_list = Mitra.objects.all()
     return render(request, 'mitra/mitra_list.html', {'mitra_list': mitra_list})
 
+
+def _current_mitra_profile(request):
+    """Return the legacy profile owned by the signed-in mitra account."""
+    if getattr(request.user, 'role', None) != 'mitra':
+        return None
+    owner = Customer.objects.filter(username=request.user.username).first()
+    if owner is None:
+        return None
+    return Mitra.objects.filter(user=owner).first()
+
+
 @login_required
 def mitra_profile(request):
-    user_mitra_list = []
-    
-    customer_instance = None
-    if isinstance(request.user, Customer):
-        customer_instance = request.user
-    elif hasattr(request.user, 'customer'):
-        customer_instance = request.user.customer
-    else:
-        customer_instance = Customer.objects.filter(username=request.user.username).first()
+    if getattr(request.user, 'role', None) != 'mitra':
+        return HttpResponseForbidden('Hanya akun Mitra yang dapat melihat profil ini.')
+    profile = _current_mitra_profile(request)
+    return render(request, 'mitra/mitra_profile.html', {
+        'user_mitra_list': [profile] if profile else [],
+    })
 
-    if customer_instance:
-        user_mitra_list = Mitra.objects.filter(user=customer_instance)
-
-    context = {
-        'user_mitra_list': user_mitra_list,
-    }
-    return render(request, 'mitra/mitra_profile.html', context)
 
 @login_required
 def create_mitra(request):
-    customer_instance = None
-    if isinstance(request.user, Customer):
-        customer_instance = request.user
-    elif hasattr(request.user, 'customer'):
-        customer_instance = request.user.customer
-    else:
-        customer_instance = Customer.objects.filter(username=request.user.username).first()
-
-    existing_mitra = None
-    if customer_instance:
-        existing_mitra = Mitra.objects.filter(user=customer_instance).first()
-
+    if getattr(request.user, 'role', None) != 'mitra':
+        return HttpResponseForbidden('Hanya akun Mitra yang dapat mengelola profil ini.')
+    existing_mitra = _current_mitra_profile(request)
     if request.method == 'POST':
-        form = MitraForm(request.POST, instance=existing_mitra) if existing_mitra else MitraForm(request.POST)
+        form = MitraForm(request.POST, instance=existing_mitra)
         if form.is_valid():
-            mitra = form.save(commit=False)
-            
-            if not customer_instance:
-                customer_instance, _ = Customer.objects.get_or_create(
-                    username=request.user.username,
-                    defaults={'email': getattr(request.user, 'email', '')}
-                )
-            
-            mitra.user = customer_instance
-            mitra.save()
+            profile = form.save(commit=False)
+            if existing_mitra is None:
+                owner = Customer.objects.filter(username=request.user.username).first()
+                if owner is None:
+                    return HttpResponseForbidden('Profil akun Mitra tidak ditemukan.')
+                profile.user = owner
+            profile.save()
             return redirect('mitra:mitra_profile')
     else:
-        form = MitraForm(instance=existing_mitra) if existing_mitra else MitraForm()
-        
+        form = MitraForm(instance=existing_mitra)
+
     title = 'Edit Profil Mitra' if existing_mitra else 'Pendaftaran Mitra Baru'
     return render(request, 'mitra/mitra_form.html', {'form': form, 'title': title})
 
-@login_required
-def update_mitra(request, id):
-    return create_mitra(request)
 
 @login_required
+def update_mitra(request, id):
+    if getattr(request.user, 'role', None) != 'mitra':
+        return HttpResponseForbidden('Hanya akun Mitra yang dapat mengelola profil ini.')
+    profile = get_object_or_404(Mitra, pk=id)
+    if profile.user.username != request.user.username:
+        return HttpResponseForbidden('Kamu hanya dapat mengubah profil milikmu.')
+    return create_mitra(request)
+
+
+@login_required
+@require_POST
 def delete_mitra(request, id):
+    if getattr(request.user, 'role', None) != 'mitra':
+        return HttpResponseForbidden('Hanya akun Mitra yang dapat mengelola profil ini.')
+    profile = get_object_or_404(Mitra, pk=id)
+    if profile.user.username != request.user.username:
+        return HttpResponseForbidden('Kamu hanya dapat menghapus profil milikmu.')
+    profile.delete()
     return redirect('mitra:mitra_profile')
