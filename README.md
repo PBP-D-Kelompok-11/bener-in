@@ -31,3 +31,6 @@ Karya Kelompok 11 PBP-D:
 - 2506614763 - HISYAM PRASETYO
 - 2506656785 - HAFIZH ZUHDI HARTANTO
 - 2506656601 - DAVE WESLEY TJOENG
+
+
+Figma Design System : https://www.figma.com/design/SlrTDgk61cUD1ifEvUEPfL/bener.in-%7C-Web-Design-System?node-id=44-4102&t=mHMXzn0DzWxaxftT-1
