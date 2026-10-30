@@ -1,4 +1,5 @@
 from django.contrib.auth import login
+from django.db import transaction
 from django.shortcuts import redirect, render
 from mitra.models import Mitra
 from authentication.models import Customer
@@ -15,34 +16,33 @@ def _register(request, form_class, backend, template, is_mitra=False):
         return redirect('/')
     form = form_class(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        user = form.save()
+        with transaction.atomic():
+            user = form.save()
+            if is_mitra:
+                # The legacy Mitra profile still points at AUTH_USER_MODEL (Customer).
+                # Populate its required identity fields until that model is consolidated.
+                customer_instance, _ = Customer.objects.get_or_create(
+                    username=user.username,
+                    defaults={
+                        'email': user.email,
+                        'nama_lengkap': user.nama_lengkap,
+                        'no_hp': user.no_hp,
+                        'alamat': form.cleaned_data['alamat'],
+                    },
+                )
+                layanan = form.cleaned_data.get('layanan') or []
+                Mitra.objects.get_or_create(
+                    user=customer_instance,
+                    defaults={
+                        'nama_toko': user.nama_usaha,
+                        'layanan': ', '.join(layanan) or 'Layanan Reparasi',
+                        'alamat': form.cleaned_data['alamat'],
+                        'kontak': user.no_hp,
+                    },
+                )
+
         login(request, user, backend=backend)
-
         if is_mitra:
-            customer_instance, _ = Customer.objects.get_or_create(
-                username=user.username,
-                defaults={'email': getattr(user, 'email', '')}
-            )
-
-            nama_toko_input = form.cleaned_data.get('nama_usaha') or getattr(user, 'nama_usaha', f"Toko {user.username}")
-            kontak_input = form.cleaned_data.get('no_hp') or form.cleaned_data.get('kontak') or getattr(user, 'no_hp', '')
-            alamat_input = form.cleaned_data.get('alamat') or "Belum diatur"
-
-            layanan_input = form.cleaned_data.get('layanan') or form.cleaned_data.get('layanan_dikerjakan')
-            if isinstance(layanan_input, list):
-                layanan_input = ", ".join(layanan_input)
-            elif not layanan_input:
-                layanan_input = "Layanan Reparasi"
-
-            Mitra.objects.get_or_create(
-                user=customer_instance,
-                defaults={
-                    'nama_toko': nama_toko_input,
-                    'layanan': layanan_input,
-                    'alamat': alamat_input,
-                    'kontak': kontak_input
-                }
-            )
             return redirect('mitra:mitra_profile')
 
         return redirect('/')

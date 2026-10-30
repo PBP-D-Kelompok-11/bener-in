@@ -17,10 +17,13 @@
                         <p class="card-text"><strong>Alamat:</strong> {{ mitra.alamat }}</p>
                         <p class="card-text"><strong>Kontak:</strong> {{ mitra.kontak }}</p>
                     </div>
-                    {% if user.is_authenticated and user == mitra.user %}
+                    {% if user.is_authenticated and user.role == 'mitra' and user.username == mitra.user.username %}
                         <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
                             <a href="{% url 'mitra:update_mitra' mitra.id %}" class="btn btn-sm btn-warning">Edit</a>
-                            <a href="{% url 'mitra:delete_mitra' mitra.id %}" class="btn btn-sm btn-danger">Hapus</a>
+                            <form method="post" action="{% url 'mitra:delete_mitra' mitra.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                            </form>
                         </div>
                     {% endif %}
                 </div>
