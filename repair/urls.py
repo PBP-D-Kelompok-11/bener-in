@@ -13,4 +13,5 @@ urlpatterns = [
     path('<int:pk>/', views.request_detail, name='detail'),
     path('<int:pk>/edit/', views.edit_request, name='edit'),
     path('<int:pk>/cancel/', views.cancel_request, name='cancel'),
+    path("<int:pk>/json/",views.request_detail_json, name="detail_json")
 ]

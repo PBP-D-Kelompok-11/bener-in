@@ -16,6 +16,8 @@ class RepairRequest(models.Model):
         CANCELLED = 'cancelled', 'Cancelled'
         UNABLE_TO_REPAIR = 'unable_to_repair', 'Unable to Repair'
 
+    # Baca sebagai status sekarang -> tujuan yang diizinkan -> role yang boleh menjalankannya.
+    # Status akhir tidak punya entri asal, jadi tidak bisa dipindahkan lagi lewat alur ini.
     TRANSITIONS = {
         Status.PENDING: {
             Status.ACCEPTED: 'mitra',
@@ -37,6 +39,7 @@ class RepairRequest(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='repair_requests',
     )
+    # Relasi ini menyimpan mitra_id pilihan Customer; dashboard mencocokkannya dengan akun login.
     mitra = models.ForeignKey(
         MitraReparasi, on_delete=models.PROTECT,
         related_name='repair_requests',
@@ -88,6 +91,8 @@ class RepairRequest(models.Model):
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        # Saat edit, baca record yang tersimpan agar pemilik, tujuan, kategori, dan aturan Pending terjaga.
+        # Perubahan status harus lewat transition_to() agar tidak melewatkan pencatatan riwayat.
         with transaction.atomic():
             if not self._state.adding:
                 original = type(self).objects.select_for_update().get(pk=self.pk)
@@ -105,6 +110,7 @@ class RepairRequest(models.Model):
             self.full_clean()
             creating = self._state.adding
             super().save(*args, **kwargs)
+            # Event pertama hanya dibuat saat insert. Edit deskripsi tidak menambah event status.
             if creating:
                 RepairStatusHistory.objects.create(
                     request=self,
@@ -121,11 +127,14 @@ class RepairRequest(models.Model):
         if self.pk is None:
             raise ValidationError('Save the request before changing its status.')
         reason = (reason or '').strip()
+        # Pakai status terbaru dari database, bukan hanya status objek yang dibaca view sebelumnya.
+        # Pada database yang mendukungnya, select_for_update mengunci row sampai transaksi selesai.
         with transaction.atomic():
             current = type(self).objects.select_for_update().get(pk=self.pk)
             actor_role = self.TRANSITIONS.get(current.status, {}).get(to_status)
             if actor_role is None:
                 raise ValidationError('This status transition is not allowed.')
+            # Role saja belum cukup: aktor harus pemilik request atau Mitra yang dituju.
             if actor_role == 'customer':
                 if not isinstance(actor, Customer) or actor.pk != current.customer_id or not actor.is_active:
                     raise ValidationError('Only the owning customer can cancel this request.')
@@ -135,12 +144,14 @@ class RepairRequest(models.Model):
                 raise ValidationError('A reason is required for this outcome.')
 
             occurred_at = timezone.now()
+            # Ubah satu request yang sama. Kondisi status ikut menjaga update dari status yang salah.
             changed = type(self).objects.filter(
                 pk=self.pk, status=current.status,
             ).update(status=to_status, updated_at=occurred_at)
             if changed != 1:
                 raise ValidationError('The request status changed. Reload and try again.')
             previous_status = current.status
+            # QuerySet.update() tidak memperbarui objek Python; samakan sebelum validasi riwayat.
             current.status = to_status
             event = RepairStatusHistory(
                 request=current,
@@ -151,12 +162,14 @@ class RepairRequest(models.Model):
                 customer_actor=actor if actor_role == 'customer' else None,
                 mitra_actor=actor if actor_role == 'mitra' else None,
             )
+            # Jika simpan riwayat gagal, transaction.atomic juga membatalkan perubahan status.
             event.save()
         self.refresh_from_db()
         return event
 
 
 class RepairStatusHistory(models.Model):
+    # Satu request punya banyak event. related_name menyediakan repair.status_history untuk timeline.
     request = models.ForeignKey(
         RepairRequest, on_delete=models.PROTECT, related_name='status_history',
     )
@@ -204,6 +217,7 @@ class RepairStatusHistory(models.Model):
         if self.to_status in RepairRequest.REASON_REQUIRED and not self.reason:
             errors['reason'] = 'A reason is required for this outcome.'
         if self.request_id:
+            # Rantai harus menyambung: status asal sama dengan tujuan event terakhir.
             latest = type(self).objects.filter(request_id=self.request_id).order_by('-pk').first()
             if (latest.to_status if latest else None) != self.from_status:
                 errors['from_status'] = 'History must follow the latest status event.'

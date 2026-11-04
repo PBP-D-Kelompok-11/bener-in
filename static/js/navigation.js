@@ -7,6 +7,8 @@
   const mobile = window.matchMedia('(max-width: 900px)');
   let open = false;
 
+  // Di mobile panel mengikuti tombol hamburger; di desktop panel selalu terlihat.
+  // aria-expanded menyampaikan keadaan tombol kepada pengguna pembaca layar.
   function render() {
     toggle.hidden = !mobile.matches;
     panel.hidden = mobile.matches && !open;

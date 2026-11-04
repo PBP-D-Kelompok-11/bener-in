@@ -1,3 +1,4 @@
+// Wizard pembuatan request. Script ini hanya berjalan pada halaman yang memiliki form wizard.
 (() => {
   const form = document.querySelector('[data-repair-wizard]');
   if (!form) return;
@@ -41,6 +42,7 @@
     });
   }
 
+  // Semua isian tetap di satu form. Lanjut/Kembali hanya mengganti bagian yang terlihat.
   function showStep(index, focus = true) {
     currentStep = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, stepIndex) => { step.hidden = stepIndex !== currentStep; });
@@ -52,6 +54,7 @@
     if (focus) steps[currentStep].querySelector('h2').focus();
   }
 
+  // Pindahkan kartu yang sudah ada ke kelompok yang cocok; daftar ini bukan aturan izin server.
   function arrangePartners() {
     if (!matchingSection || !otherSection) return;
     const category = selected('category')?.value;
@@ -135,6 +138,7 @@
   form.querySelectorAll('[data-back]').forEach((button) => button.addEventListener('click', () => {
     showStep(currentStep - 1);
   }));
+  // Hanya langkah terakhir boleh mengirim POST. Django tetap memvalidasi seluruh isian.
   form.addEventListener('submit', (event) => {
     if (submitting) {
       event.preventDefault();
@@ -162,6 +166,7 @@
   showStep(currentStep, false);
 })();
 
+// Daftar Customer: kirim GET dengan parameter filter, lalu ganti bagian hasil saja.
 (() => {
   const page = document.querySelector('[data-customer-list]');
   if (!page) return;
@@ -203,6 +208,7 @@
   }
 
   async function loadResults(push = true) {
+    // Batalkan pencarian lama dan abaikan responsnya jika pencarian baru sudah dimulai.
     version += 1;
     const current = version;
     controller?.abort();
@@ -251,6 +257,7 @@
     loadResults();
   });
   filters.elements.q.addEventListener('input', () => {
+    // Tunggu jeda ketik 300 ms sebelum meminta hasil, supaya tidak fetch tiap karakter.
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => loadResults(), 300);
   });
@@ -270,6 +277,7 @@
   });
 })();
 
+// Dashboard Mitra: GET untuk membaca daftar; POST untuk tindakan yang mengubah status.
 (() => {
   const dashboard = document.querySelector('[data-mitra-dashboard]');
   if (!dashboard) return;
@@ -414,6 +422,7 @@
     if (details?.open) details.querySelector('textarea')?.focus();
   }, true);
 
+  // Pasang listener di wadah: form tetap tertangkap walaupun kartu diganti setelah fetch.
   results.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-mitra-action]');
     if (!form) return;
@@ -444,6 +453,7 @@
       const contentType = response.headers.get('Content-Type') || '';
       const data = contentType.includes('application/json') ? await response.json() : null;
       if (response.ok && data?.ok) {
+        // Pakai hasil dari server setelah penyimpanan berhasil; jangan menebak status di browser.
         invalidateFilters();
         let refreshed = true;
         if (window.location.search === actionQuery) {

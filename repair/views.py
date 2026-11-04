@@ -12,6 +12,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 
 from authentication.models import Customer, KategoriBarang, MitraReparasi
 
@@ -24,6 +25,8 @@ TOKEN_MAX_AGE = 60 * 60 * 6
 
 
 def _new_token(customer):
+    # Token bertanda tangan ini terikat ke Customer dan dipakai untuk mendeteksi kirim ulang.
+    # Fungsinya berbeda dari CSRF token, yang melindungi POST lintas situs.
     return signing.dumps(
         {'customer_id': customer.pk, 'nonce': uuid4().hex}, salt=TOKEN_SALT,
     )
@@ -38,6 +41,7 @@ def _valid_token(token, customer):
 
 
 def _partner_cards(category, selected_id):
+    # Mitra terdaftar dengan layanan yang cocok ditampilkan dulu; yang lain tetap bisa dipilih.
     category_labels = dict(KategoriBarang.choices)
     matching, others = [], []
     for mitra in MitraReparasi.objects.filter(is_active=True).order_by('nama_usaha', 'pk'):
@@ -62,6 +66,7 @@ def _render_create(request, form, token, *, preview=False):
     selected_partner = next(
         (card['name'] for card in matching + others if card['selected']), None,
     )
+    # Saat server menolak POST, wizard membuka langkah yang berisi error pertama.
     first_error_step = 0
     for field, step in (
         ('category', 0), ('mitra', 1), ('item_name', 2),
@@ -117,6 +122,7 @@ MITRA_GROUPS = {
 
 
 def _is_ajax(request):
+    # Header ini memilih bentuk respons, bukan memberi izin mengakses data.
     return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
 
@@ -132,6 +138,8 @@ def _mitra_dashboard_context(request):
         status = ''
     search = request.GET.get('q', '').strip()
 
+    # Ini alasan request tidak muncul di dashboard Mitra lain: filter dulu berdasarkan akun login.
+    # Hitungan tab dan hasil pencarian sama-sama berawal dari kumpulan request ini.
     assigned = RepairRequest.objects.filter(mitra=request.user)
     by_status = {
         row['status']: row['total']
@@ -175,11 +183,13 @@ def mitra_dashboard(request):
     if request.method != 'GET':
         return HttpResponseNotAllowed(['GET'])
     context = _mitra_dashboard_context(request)
+    # GET biasa mengembalikan halaman; GET AJAX hanya mengembalikan bagian daftar.
     template = 'repair/_mitra_results.html' if _is_ajax(request) else 'repair/mitra_dashboard.html'
     return render(request, template, context)
 
 
 def _mitra_action_response(request, status_code, message, *, errors=None, event=None, repair=None):
+    # Aksi AJAX perlu JSON untuk memperbarui kartu dan hitungan; submit biasa kembali ke dashboard.
     if _is_ajax(request):
         if event is None:
             return JsonResponse({'ok': False, 'error': message, 'errors': errors or {}}, status=status_code)
@@ -219,6 +229,7 @@ def mitra_transition(request, pk):
         return HttpResponseNotAllowed(['POST'])
     if not _mitra_allowed(request):
         return _mitra_action_response(request, 403, 'Hanya mitra yang dituju dapat mengubah status.')
+    # Cek ID request DAN Mitra yang dituju, termasuk jika POST dikirim langsung dari luar UI.
     repair = RepairRequest.objects.filter(pk=pk, mitra=request.user).first()
     if repair is None:
         return _mitra_action_response(request, 404, 'Permintaan ini tidak tersedia untuk akun Anda.')
@@ -230,6 +241,7 @@ def mitra_transition(request, pk):
         return _mitra_action_response(request, 400, message, errors=errors)
     target = form.cleaned_data['to_status']
     expected = form.cleaned_data['expected_status']
+    # Tolak aksi dari kartu yang sudah kedaluwarsa jika status yang dibaca berbeda dari form.
     if repair.status != expected:
         return _mitra_action_response(request, 409, 'Status permintaan telah berubah. Muat ulang daftar sebelum mencoba lagi.')
     if RepairRequest.TRANSITIONS.get(expected, {}).get(target) != 'mitra':
@@ -238,6 +250,7 @@ def mitra_transition(request, pk):
         message = 'Alasan wajib diisi untuk keputusan ini.'
         return _mitra_action_response(request, 400, message, errors={'reason': [message]})
     try:
+        # Model memeriksa lagi transisinya dan menyimpan status + riwayat dalam satu transaksi.
         event = repair.transition_to(target, request.user, reason=form.cleaned_data['reason'])
     except ValidationError:
         repair.refresh_from_db()
@@ -305,9 +318,11 @@ def request_detail(request, pk):
     else:
         return HttpResponseForbidden('Akun ini tidak dapat melihat permintaan reparasi.')
 
+    # Cari ID hanya di queryset yang boleh diakses oleh role dan akun yang sedang login.
     repair = get_object_or_404(
         repairs.select_related('customer', 'mitra'), pk=pk,
     )
+    # Timeline dibaca dari event yang tersimpan; status saat ini tetap berasal dari request.
     history = list(repair.status_history.select_related(
         'customer_actor', 'mitra_actor',
     ).order_by('occurred_at', 'pk'))
@@ -344,6 +359,7 @@ def edit_request(request, pk):
             return redirect('repair:detail', pk=repair.pk)
         return HttpResponseForbidden('Hanya permintaan Pending yang dapat diedit.')
 
+    # instance=repair menghubungkan form ke record lama agar save() mengedit, bukan membuat baru.
     form = RepairRequestEditForm(request.POST or None, instance=repair)
     if request.method == 'POST' and form.is_valid():
         try:
@@ -378,6 +394,7 @@ def cancel_request(request, pk):
             messages.error(request, 'Status permintaan telah berubah. Pembatalan tidak dapat dilakukan.')
             return redirect('repair:detail', pk=repair.pk)
         return HttpResponseForbidden('Hanya permintaan Pending yang dapat dibatalkan.')
+    # GET hanya menampilkan konfirmasi. POST membatalkan lewat perubahan status, bukan hapus data.
     if request.method == 'POST':
         try:
             repair.transition_to(RepairRequest.Status.CANCELLED, request.user)
@@ -391,16 +408,19 @@ def cancel_request(request, pk):
 
 @login_required
 def create_request(request):
+    # GET menyiapkan wizard. POST bisa memuat ulang Mitra, meninjau, atau menyimpan request final.
     if not _customer_allowed(request):
         return HttpResponseForbidden('Hanya akun Customer yang dapat membuat permintaan reparasi.')
 
     if request.method == 'POST':
         data = request.POST.copy()
+        # Jika kategori berubah sejak form ditampilkan, pilihan Mitra lama harus dipilih ulang.
         if data.get('displayed_category') and data['displayed_category'] != data.get('category'):
             data['mitra'] = ''
         token = request.POST.get('submission_token', '')
         token_valid = _valid_token(token, request.user)
         if token_valid:
+            # Jika token ini sudah pernah berhasil dipakai, buka konfirmasi request yang sama.
             existing = RepairRequest.objects.filter(
                 customer=request.user, submission_token=token,
             ).first()
@@ -418,6 +438,7 @@ def create_request(request):
                 token = _new_token(request.user)
             return _render_create(request, form, token)
 
+        # Form menerima POST mentah; is_valid() menjalankan clean_*() sebelum simpan.
         form = RepairRequestCreateForm(data)
         form_valid = form.is_valid()
         if not token_valid:
@@ -427,12 +448,14 @@ def create_request(request):
         if form_valid and token_valid:
             if action == 'preview':
                 return _render_create(request, form, token, preview=True)
+            # Mitra sudah diisi oleh ModelForm. commit=False memberi waktu untuk mengisi pemilik dari sesi.
             repair = form.save(commit=False)
             repair.customer = request.user
             repair.submission_token = token
             try:
                 repair.save()
             except IntegrityError:
+                # Dua POST bersamaan bisa lolos cek awal; token unik di database menangani tabrakan ini.
                 existing = RepairRequest.objects.filter(
                     customer=request.user, submission_token=token,
                 ).first()
@@ -451,6 +474,7 @@ def create_request(request):
                 else:
                     form.add_error(None, error)
             else:
+            
                 return redirect('repair:confirmation', pk=repair.pk)
         return _render_create(request, form, token)
 
@@ -467,3 +491,20 @@ def request_confirmation(request, pk):
         RepairRequest.objects.select_related('mitra'), pk=pk, customer=request.user,
     )
     return render(request, 'repair/request_confirmation.html', {'repair': repair})
+
+@login_required
+@require_GET
+def request_detail_json(request,pk):
+    if not _customer_allowed(request):
+        return JsonResponse({"error":"Khusus Customer"}, status = 403)
+    repair = get_object_or_404(RepairRequest, pk=pk, customer = request.user,)
+    return JsonResponse(
+        {
+            "id": repair.pk,
+            "item_name": repair.item_name,
+            "category":repair.category,
+            "mitra": repair.mitra,
+            "status": repair.status,
+            "created_at": repair.created_at
+        }
+    )

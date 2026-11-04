@@ -31,6 +31,7 @@ def customer_required(view_func):
 
 @customer_required
 def impact_dashboard(request):
+    # Sambungan Modul B ke Impact: hitung request selesai milik Customer ini, bukan jumlah event.
     saved_count = RepairRequest.objects.filter(
         customer=request.user, status=RepairRequest.Status.COMPLETED,
     ).count()

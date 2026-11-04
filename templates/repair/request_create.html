@@ -17,8 +17,10 @@
         </header>
 
         <div class="repair-layout">
+            {# Empat data-step ini milik satu form; data-start-step membantu membuka langkah yang error. #}
             <form method="post" action="{% url 'repair:create' %}" class="repair-form" data-repair-wizard data-start-step="{{ first_error_step }}">
                 {% csrf_token %}
+                {# Token submit ulang berbeda dari CSRF; displayed_category membantu reset Mitra saat kategori berubah. #}
                 <input type="hidden" name="submission_token" value="{{ token }}">
                 <input type="hidden" name="displayed_category" value="{{ displayed_category }}">
 

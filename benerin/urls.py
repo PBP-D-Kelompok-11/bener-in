@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('authentication.urls')),
     path('reviews/', include('reviews.urls')),
     path('mitra/', include('mitra.urls')),
+    # Gabungkan prefix ini dengan pola di repair.urls: repair/ + new/ menjadi /repair/new/.
     path('repair/', include('repair.urls')),
     path('locations/', include('locations.urls')),
 ]

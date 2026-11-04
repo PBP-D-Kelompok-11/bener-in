@@ -65,6 +65,8 @@
     loadPlaces();
   });
 
+  // Cari lokasi OpenStreetMap sesuai kategori dan area yang terlihat di peta.
+  // Ini berbeda dari pilihan akun Mitra terdaftar pada form repair.
   function buildQuery(filters, bounds) {
     const box = `(${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()})`;
     const parts = filters.map(filter => `nwr["${filter[0]}"="${filter[1]}"]${box};`);

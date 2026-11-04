@@ -60,6 +60,7 @@
                 </div>
                 {% if history %}
                 <ol class="repair-timeline">
+                    {# Setiap baris di sini berasal dari satu event database yang dikirim request_detail(). #}
                     {% for event in history %}
                     <li class="repair-timeline__event">
                         <span class="repair-timeline__dot" aria-hidden="true"></span>

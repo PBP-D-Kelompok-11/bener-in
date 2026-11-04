@@ -6,6 +6,7 @@ from .models import RepairRequest
 
 
 class RepairRequestCreateForm(forms.ModelForm):
+    # ModelChoiceField mengubah ID yang dikirim browser menjadi objek Mitra yang valid.
     mitra = forms.ModelChoiceField(
         queryset=MitraReparasi.objects.none(),
         error_messages={
@@ -16,6 +17,7 @@ class RepairRequestCreateForm(forms.ModelForm):
 
     class Meta:
         model = RepairRequest
+        # Pemilik dan status tidak berasal dari browser; view dan model yang menentukannya.
         fields = ['category', 'mitra', 'item_name', 'description']
         labels = {
             'category': 'Kategori barang',
@@ -44,8 +46,11 @@ class RepairRequestCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['category'].choices = KategoriBarang.choices
+        # Yang divalidasi di server adalah Mitra aktif. Cocok kategori hanya prioritas tampilan.
         self.fields['mitra'].queryset = MitraReparasi.objects.filter(is_active=True)
 
+    # Django memanggil clean_<field>() lewat is_valid(); return nilainya atau lempar ValidationError.
+    # Untuk membandingkan dua isian, tempatnya clean() di kelas form yang sama.
     def clean_item_name(self):
         value = self.cleaned_data['item_name'].strip()
         if not value:
@@ -57,9 +62,10 @@ class RepairRequestCreateForm(forms.ModelForm):
         if not value:
             raise forms.ValidationError('Jelaskan masalah pada barang.')
         return value
-
+    
 
 class RepairRequestEditForm(forms.ModelForm):
+    # Form edit sengaja terpisah: kategori, Mitra, dan status tidak bisa diubah lewat form ini.
     class Meta:
         model = RepairRequest
         fields = ['item_name', 'description']
@@ -85,6 +91,8 @@ class RepairRequestEditForm(forms.ModelForm):
 
 
 class MitraTransitionForm(forms.Form):
+    # Form membaca aksi yang diminta, bukan menyimpan status. Izin dan urutan dicek di view/model.
+    # expected_status adalah status saat kartu dirender, bukan status yang dipercaya begitu saja.
     expected_status = forms.ChoiceField(choices=RepairRequest.Status.choices)
     to_status = forms.ChoiceField(choices=[
         (RepairRequest.Status.ACCEPTED, 'Terima permintaan'),
