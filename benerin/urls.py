@@ -26,4 +26,5 @@ urlpatterns = [
     path('mitra/', include('mitra.urls')),
     path('repair/', include('repair.urls')),
     path('locations/', include('locations.urls')),
+    path('api/v1/', include('mobile_api.urls')),
 ]
